@@ -75,6 +75,16 @@ What the table tells us / which step of the loop does the work:
 - At 200 shots both samplers see every one of the 32 choices. The classical step (score every seen choice exactly with `hour_ok` + `hour_cost` and keep the best) then does all the work, and both give exactly the same day.
 - The remaining +7.06% gap is not caused by sampling. With 200 shots every hour matches the single-hour best (24 / 24), but the day is still 7% above the MILP. The cause is the hour-by-hour greedy loop: it does not plan ahead for startups and min up / min down times. Better sampling cannot close this gap; a multi-hour formulation is needed.
 
+Where the daily cost comes from: `run_day` builds the schedule hour by hour (keep the cheapest sampled choice that passes `hour_ok`, scored with the exact `hour_cost`), then the checker's `check_schedule` scores the whole day as startup + no-load + energy. Energy uses `dispatch_hour`: every plant that is on makes at least its minimum, and the rest goes to the cheapest plants first. The MILP row is scored by the same checker. Breakdown, 5 plants, 200 shots, seed 7:
+
+| | Total $ | Startup $ | No-load $ | Energy $ |
+|---|---|---|---|---|
+| MILP | 327,924 | 32,930 | 20,178 | 274,816 |
+| Hour by hour | 351,082 | 43,360 | 26,163 | 281,559 |
+| Difference | +23,158 | +10,430 | +5,985 | +6,743 |
+
+The schedules differ mainly at hours 5–9. The MILP starts GAS_CC at hour 5 and keeps it on. Hour by hour, GAS_CC's $27,650 startup looks too expensive for one hour, so hours 5–7 are covered with oil and peakers (expensive output plus their own startups and no-load). GAS_CC still has to start at hour 8, when demand is too high for the small plants. The day pays for the small plants and the GAS_CC startup.
+
 ### 10-plant fleet: QAOA vs random
 
 Command: `python -m experiments.shots_sweep --fleet 10 --shots 200 1000 --tag fleet10` → `results/shots_sweep_fleet10.csv` (p=1, 3 slack bits, seeds 0–4).

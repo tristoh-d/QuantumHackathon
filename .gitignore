@@ -7,3 +7,4 @@ venv/
 .env
 .agents
 .skills-lock.json
+results/

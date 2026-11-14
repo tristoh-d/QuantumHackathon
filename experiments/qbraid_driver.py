@@ -22,14 +22,64 @@ to results/hardware_runs.csv, so a job ID is never lost even if this script is i
 import argparse
 import csv
 import sys
+import time
+from datetime import datetime, timezone
 
 import numpy as np
 
-from src.config import DEVICES, MAX_HARDWARE_SHOTS, QPU_DEVICES, RESULTS_DIR
+from src.config import DEVICES, MAX_HARDWARE_SHOTS, QPU_DEVICES, REPO_ROOT, RESULTS_DIR
 from src.hardware import RUN_LOG, device_kind, log_run, submit_qbraid
 
 LOCAL = "aer"
 NOISE_MODELS = {"ionq-sim": "forte-1"}   # free IonQ simulator: emulate Forte's noise by default
+
+# docs/results.md "Milestone 5: hardware run record" table. UC runs on qBraid get a row there automatically
+# (results/ is git-ignored, so this is the copy that gets committed).
+RESULTS_MD = REPO_ROOT / "docs" / "results.md"
+RESULTS_MD_HEADER = "| Device | Kind (simulator / emulator / QPU) | Job ID |"
+RESULTS_MD_COLUMNS = ["device", "kind", "job_id", "hour", "shots", "p", "cx", "status", "valid", "best", "queue"]
+
+
+def record_in_results_md(add=True, **cells):
+    """Add a row to the hardware table in docs/results.md, or update the row that already has this job ID.
+
+    On update, only the non-empty cells passed in replace the old ones (so `fetch` can just set the status).
+    With add=False, only an existing row is updated.
+    """
+    if not RESULTS_MD.exists():
+        return
+    lines = RESULTS_MD.read_text(encoding="utf-8").splitlines(keepends=True)
+    start = next((i for i, line in enumerate(lines) if line.startswith(RESULTS_MD_HEADER)), None)
+    if start is None:
+        print(f"(hardware table not found in {RESULTS_MD.name}; row not added)")
+        return
+    end = start + 2                                   # skip header + |---| line
+    while end < len(lines) and lines[end].startswith("|"):
+        end += 1
+
+    def to_line(values):
+        return "| " + " | ".join(str(v) for v in values) + " |\n"
+
+    new = [cells.get(c, "") for c in RESULTS_MD_COLUMNS]
+    for i in range(start + 2, end):
+        old = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+        if len(old) == len(new) and old[2] == str(cells["job_id"]):
+            lines[i] = to_line(n if str(n) != "" else o for n, o in zip(new, old))
+            action = "updated"
+            break
+    else:
+        if not add:
+            return
+        lines.insert(end, to_line(new))
+        action = "added"
+    RESULTS_MD.write_text("".join(lines), encoding="utf-8")
+    print(f"{action} row for this job in docs/{RESULTS_MD.name}")
+
+
+def _queue_time(seconds):
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    return f"{h}h {m:02d}m" if h else f"{m}m {s:02d}s"
 
 
 # ---------------------------------------------------------------- tasks: build circuit + score counts
@@ -62,8 +112,9 @@ def prepare_uc(args):
 
     def score(label, counts):
         share = choice_shares(counts, n)
-        print(f"{label:<55} valid shots {share[is_valid].sum():5.0%}   best choice {share[best_k]:5.1%}")
-        return share
+        valid, best = f"{share[is_valid].sum():.0%}", f"{share[best_k]:.1%}"
+        print(f"{label:<55} valid shots {valid:>5}   best choice {best:>5}")
+        return dict(share=share, valid=valid, best=best)
 
     def plot(sim_share, hw_share, hw_label):
         try:
@@ -155,7 +206,7 @@ def cmd_run(args):
 
     from src.hardware import run_aer
     sim_counts = run_aer(qc, shots=args.shots, seed=args.seed)
-    sim_share = score("Aer (ideal simulator)", sim_counts)
+    sim = score("Aer (ideal simulator)", sim_counts)
     if device_id is None:
         return
 
@@ -163,20 +214,29 @@ def cmd_run(args):
     job = submit_qbraid(qc, device_id, shots=args.shots, noise_model=noise, allow_qpu=args.i_am_sure)
     note = " | ".join(x for x in (args.task, meta["desc"], args.note) if x)
     log_run(device_id, job.id, args.shots, meta["hour"], meta["p"], meta["cx"], status="submitted", note=note)
-    print(f"Device: {device_id} | Job ID: {job.id}   <- copy into docs/results.md")
+    submitted_at = time.time()
+    print(f"Device: {device_id} | Job ID: {job.id}")
+    md_row = dict(device=device_id + (f" ({noise} noise)" if noise else ""), kind=device_kind(device_id),
+                  job_id=job.id, hour=meta["hour"], shots=args.shots, p=meta["p"], cx=meta["cx"])
+    in_table = args.task == "uc"     # the docs/results.md table is the UC hardware record
 
     if args.no_wait:
+        if in_table:
+            record_in_results_md(**md_row, status="submitted")
         print(f"Submitted without waiting. Collect it later with:\n"
               f"    python -m experiments.qbraid_driver fetch {job.id}")
         return
 
     counts = job.result().data.get_counts()
+    queue = _queue_time(time.time() - submitted_at)
     log_run(device_id, job.id, args.shots, meta["hour"], meta["p"], meta["cx"], status="completed",
             counts=counts, note=note)
     label = f"{device_id} ({device_kind(device_id)})" + (f" + {noise} noise" if noise else "")
-    hw_share = score(label, counts)
+    hw = score(label, counts)
+    if in_table:
+        record_in_results_md(**md_row, status="completed", valid=hw["valid"], best=hw["best"], queue=queue)
     if plot is not None:
-        plot(sim_share, hw_share, label)
+        plot(sim["share"], hw["share"], label)
 
 
 def _submitted_row(job_id):
@@ -209,6 +269,16 @@ def cmd_fetch(args):
             row.get("p", ""), row.get("cx_gates", ""), status="completed", counts=counts, note=row.get("note", ""))
     top = dict(sorted(counts.items(), key=lambda kv: -kv[1])[:8])
     print(f"Counts saved and logged to {RUN_LOG.relative_to(RESULTS_DIR.parent)}. Most common: {top}")
+    if row.get("utc"):    # upper bound: from submission to when we fetched it
+        waited = datetime.now(timezone.utc) - datetime.fromisoformat(row["utc"])
+        queue = "≤ " + _queue_time(waited.total_seconds())
+    else:
+        queue = ""
+    # Marks the row completed if `run --no-wait` added one; valid/best shares need the task context, so
+    # fill those in by hand from the saved counts (or re-run the task on the same device).
+    record_in_results_md(add=row.get("note", "").startswith("uc"), job_id=args.job_id, device=row.get("device", ""), kind=device_kind(row.get("device", "")),
+                         hour=row.get("hour", ""), shots=row.get("shots", ""), p=row.get("p", ""),
+                         cx=row.get("cx_gates", ""), status="completed", queue=queue)
     print("Re-run the matching `run` command with --device aer to compare against the ideal simulator.")
 
 

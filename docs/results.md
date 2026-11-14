@@ -68,8 +68,9 @@ Also in `results/hardware_runs.csv` (written automatically by `src/hardware.py`)
 
 | Device | Kind (simulator / emulator / QPU) | Job ID | Hour | Shots | p | CX gates | Status | Valid shots | Best-choice share | Queue time |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Aer | simulator | — | | | 1 | | | | | — |
-| ionq:ionq:sim:simulator (forte-1 noise) | simulator | | | | 1 | | | | | |
+| Aer | simulator | — | 14 | 200 | 1 | 56 | completed | 54% | 9.0% | — |
+| ionq:ionq:sim:simulator (forte-1 noise) | simulator | ionq:ionq:sim:simulator-a99b-qjob-6af87c58c8f5265fb3f1b4f4 | 14 | 200 | 1 | 56 | completed | 50% | 8.0% | |
+| ionq:ionq:sim:simulator (forte-1 noise) | simulator | ionq:ionq:sim:simulator-a99b-qjob-6af87ccdc8f5265fb3f1b524 | 14 | 200 | 1 | 56 | completed | 50% | 12.5% | |
 | ionq:ionq:qpu:forte-1 | QPU | | | ≤ 200 | 1 | | | | | |
 | quantinuum:quantinuum:sim:h2-emulator | emulator | | | | 1 | | | | | |
 

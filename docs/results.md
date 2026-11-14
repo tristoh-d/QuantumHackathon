@@ -305,6 +305,144 @@ What this shows:
 - **At 50 shots, p=1 QAOA is no better than random on daily cost** (+7.6–8.8% vs +8.56%, overlapping CIs), even though its samples are better. 50 shots on 32 choices already finds the hour's best most of the time (20.4 vs 20.5 hours for ideal p=1 vs random). The classical scoring step does most of the work, as in Milestone 4.
 - **Compared with the MILP**, the best simulated setting (p=2, 50 shots) is +5.6–6.0% on real days. That is close to the 200-shot hour-by-hour gap (+4.6–4.9%) and to the cheapest-first rule (+5.90%, but valid on only 25 / 40 days). The remaining gap is the hour-by-hour method, not the backend.
 
+## Where MILP struggles
+
+Background and sources: docs/milp_hard_cases.md. Commands: `python -m experiments.milp_hardness milp` → `results/hardness_milp.csv` (n = 10–50, 5 seeds, 30 s limit); `python -m experiments.milp_hardness quantum --family <family>` → `results/hardness_quantum_<family>.csv` (exact statevector, n = 8–22); `python -m experiments.milp_hardness summary` prints the tables below. The n = 22 quantum rows have 3 seeds, not 5 (the run was stopped there). MILP times were measured with four experiments sharing the CPU, so the node counts are the more robust measure.
+
+### MILP (HiGHS) effort vs size
+
+| Family | n | MILP vars | Median time | Median nodes | Max nodes | Timeouts |
+|---|---|---|---|---|---|---|
+| market_split | 10 | 10 | 0.02 s | 3 | 16 | 0 / 5 |
+| market_split | 15 | 15 | 0.17 s | 31 | 174 | 0 / 5 |
+| market_split | 20 | 20 | 0.93 s | 1,572 | 4,273 | 0 / 5 |
+| market_split | 25 | 25 | 9.32 s | 5,992 | 33,543 | 0 / 5 |
+| market_split | 30 | 30 | 30.02 s | 2,636 | 50,827 | 3 / 5 |
+| market_split | 35–50 | 35–50 | 30.02 s | 0 | 0 | 5 / 5 each |
+| interaction | 10 | 55 | 0.15 s | 1 | 1 | 0 / 5 |
+| interaction | 15 | 113 | 0.46 s | 1 | 7 | 0 / 5 |
+| interaction | 20 | 200 | 3.08 s | 13 | 22 | 0 / 5 |
+| interaction | 25 | 307 | 19.03 s | 230 | 303 | 0 / 5 |
+| interaction | 30 | 444 | 30.03 s | 621 | 671 | 4 / 5 |
+| interaction | 35–50 | 606–1,222 | 30.04 s | 2–207 | 2–294 | 5 / 5 each |
+| symmetric | 10–50 | 10–50 | 0.01–0.09 s | 1 | 1 | 0 / 5 each |
+
+(Market split at n ≥ 35: 0 nodes means the 30 s ran out before branching started.)
+
+### QAOA vs random vs SA: exact probability that one shot is optimal
+
+Geometric mean over seeds. "sa" is the share of 1,000 annealing runs (1,000 sweeps each, same QUBO) that end at the optimum; the bracket counts the instances where any run found it. "transfer" reuses median angles from a smaller size, without per-instance tuning.
+
+Market split:
+
+| n | MILP time / nodes | random | qaoa_p1 | qaoa_p2 | qaoa_p3 | qaoa_p1_transfer | sa |
+|---|---|---|---|---|---|---|---|
+| 8 | 0.002 s / 0 | 3.91e-03 | 4.27e-03 | 9.60e-03 | 8.49e-03 | — | 0.196 (5/5 inst.) |
+| 10 | 0.022 s / 3 | 9.77e-04 | 9.68e-04 | 2.57e-03 | 2.55e-03 | 8.34e-04 | 0.057 (5/5 inst.) |
+| 12 | 0.067 s / 13 | 2.44e-04 | 4.27e-04 | 7.33e-04 | 7.68e-04 | 3.89e-04 | 0.017 (5/5 inst.) |
+| 14 | 0.159 s / 55 | 6.10e-05 | 8.59e-05 | 1.90e-04 | 1.95e-04 | 5.31e-05 | 0.008 (5/5 inst.) |
+| 16 | 0.273 s / 235 | 1.53e-05 | 1.71e-05 | 4.38e-05 | 3.99e-05 | 1.51e-05 | 0.004 (5/5 inst.) |
+| 18 | 0.623 s / 793 | 3.81e-06 | 4.95e-06 | 1.25e-05 | 1.30e-05 | 4.10e-06 | 0.001 (4/5 inst.) |
+| 20 | 2.579 s / 1,572 | 9.54e-07 | 1.13e-06 | 3.13e-06 | 2.90e-06 | 8.43e-07 | 0.001 (3/5 inst.) |
+| 22 | 5.914 s / 6,105 | 2.38e-07 | 3.97e-07 | 8.86e-07 | 9.22e-07 | 3.79e-07 | 0.000 (0/3 inst.) |
+
+Interaction:
+
+| n | MILP time / nodes | random | qaoa_p1 | qaoa_p2 | qaoa_p3 | qaoa_p1_transfer | sa |
+|---|---|---|---|---|---|---|---|
+| 8 | 0.029 s / 1 | 4.49e-03 | 8.58e-03 | 6.68e-03 | 1.73e-02 | — | 0.157 (5/5 inst.) |
+| 10 | 0.043 s / 1 | 9.77e-04 | 2.33e-03 | 3.80e-03 | 4.13e-03 | 7.87e-04 | 0.071 (5/5 inst.) |
+| 12 | 0.067 s / 1 | 2.44e-04 | 6.14e-04 | 9.92e-04 | 1.13e-03 | 6.59e-04 | 0.027 (5/5 inst.) |
+| 14 | 0.165 s / 1 | 7.01e-05 | 1.86e-04 | 2.91e-04 | 3.53e-04 | 1.99e-04 | 0.010 (5/5 inst.) |
+| 16 | 0.386 s / 5 | 1.53e-05 | 4.29e-05 | 6.74e-05 | 8.39e-05 | 4.56e-05 | 0.002 (4/5 inst.) |
+| 18 | 0.536 s / 7 | 3.81e-06 | 1.11e-05 | 1.19e-05 | 1.58e-05 | 1.17e-05 | 0.001 (5/5 inst.) |
+| 20 | 3.260 s / 13 | 1.19e-06 | 3.53e-06 | 3.74e-06 | 5.01e-06 | 3.71e-06 | 0.000 (1/5 inst.) |
+| 22 | 3.963 s / 20 | 2.84e-07 | 9.43e-07 | 9.81e-07 | 1.36e-06 | 9.89e-07 | 0.000 (0/3 inst.) |
+
+Symmetric:
+
+| n | MILP time / nodes | random | qaoa_p1 | qaoa_p2 | qaoa_p3 | qaoa_p1_transfer | sa |
+|---|---|---|---|---|---|---|---|
+| 8 | 0.024 s / 1 | 1.37e-02 | 2.35e-02 | 3.16e-02 | 2.97e-02 | — | 0.169 (5/5 inst.) |
+| 10 | 0.003 s / 1 | 7.90e-03 | 1.39e-02 | 2.06e-02 | 2.37e-02 | 1.44e-02 | 0.231 (5/5 inst.) |
+| 12 | 0.004 s / 1 | 4.70e-03 | 6.64e-03 | 1.34e-02 | 1.64e-02 | 3.98e-03 | 0.158 (5/5 inst.) |
+| 14 | 0.008 s / 1 | 2.59e-03 | 3.22e-03 | 6.84e-03 | 7.16e-03 | 2.32e-03 | 0.099 (5/5 inst.) |
+| 16 | 0.033 s / 1 | 1.97e-03 | 3.30e-03 | 7.22e-03 | 7.12e-03 | 1.99e-03 | 0.044 (5/5 inst.) |
+| 18 | 0.031 s / 1 | 2.36e-05 | 3.14e-05 | 6.37e-05 | 8.29e-05 | 2.82e-05 | 0.003 (2/5 inst.) |
+| 20 | 0.024 s / 1 | 1.83e-04 | 3.05e-04 | 5.00e-04 | 4.45e-04 | 3.09e-04 | 0.004 (5/5 inst.) |
+| 22 | 0.119 s / 1 | 5.75e-06 | 2.53e-06 | 6.95e-06 | 6.31e-06 | 2.10e-06 | 0.000 (1/3 inst.) |
+
+How fast p_opt falls (halvings per added plant, fit of log2 p_opt vs n; lower is better):
+
+| Family | random | qaoa_p1 | qaoa_p2 | qaoa_p3 | qaoa_p1_transfer |
+|---|---|---|---|---|---|
+| market_split | 1.000 | 0.977 | 0.964 | 0.958 | 0.977 |
+| interaction | 0.990 | 0.943 | 0.954 | 0.979 | 0.856 |
+| symmetric | 0.768 | 0.851 | 0.803 | 0.815 | 0.928 |
+
+What this shows:
+
+- **No result here shows quantum beating classical.** The sizes where the MILP struggles (n ≥ 25–30 for market split and interaction) are past what we can simulate exactly (n ≤ 22). At n ≤ 22 the MILP finds the proven optimum in 6 s or less.
+- **The MILP struggles where the literature says it should, except on symmetry.** Market split needs thousands of nodes from n = 20 and times out from n = 30. Interaction times out from n = 30 (its McCormick form has about n²/2 variables). Symmetric never needs more than 1 node: HiGHS handles that symmetry by itself.
+- **QAOA beats random by a roughly fixed factor, not a growing one.** At p=3 it is about 2–4× (market split) and 4–5.5× (interaction) more likely than random to return the optimum, at every size. The fitted slopes are only slightly below random's (0.96 vs 1.00 halvings per plant on market split), so extra plants still cost QAOA almost as much as they cost random guessing. On symmetric, QAOA's probability falls faster than random's.
+- **The numbers are too small to use.** At n = 22, p_opt ≈ 1e-6 means about 4–5 million shots for a 99% chance of seeing the optimum, plus 3–5 minutes of classical angle tuning per instance (transferred angles do about as well as p=1 tuned ones, so tuning could be skipped).
+- **Simulated annealing on the same QUBO is far ahead per attempt** (0.23–0.001 per run vs 1e-2–1e-6 per shot), but it also stops finding the optimum at n = 20–22 (0 of 3 market split and interaction instances at n = 22, in 1,000 runs). Neither sampler is a substitute for the MILP at these sizes.
+- **Where QAOA does win, it wins over random sampling and the simple rule, not over the MILP:** more valid days and cheaper days than random on the 10-plant fleet (above), and valid on 39 / 40 TVA days vs 22 / 40 for the cheapest-first rule, which is still cheaper on cost.
+
+## Where MILP struggles: exact, noise-free QAOA vs MILP, SA and random
+
+Background and sources: [docs/milp_hard_cases.md](milp_hard_cases.md). Three one-hour UC scenarios are built so that LP-based branch and bound has a hard time. Each one is generated as both a MILP and a QUBO, with one qubit per plant and no slack qubits:
+
+- **market_split**: must-take generation, no curtailment. m zones (m = 2 up to 19 plants, 3 at 20–29, 4 at 30–39 …), each balanced exactly. This is the Cornuéjols–Dawande family.
+- **interaction**: pairwise plant costs of mixed sign (shared pipeline, crews, transmission), with exactly n/2 units on. The MILP needs a product variable per pair.
+- **symmetric**: three unit types with many identical copies, demand matched exactly.
+
+Commands: `python -m experiments.milp_hardness milp` (5 seeds per size, 30 s limit) and `quantum` (5 seeds per size, n = 8–22), then `summary`. The QAOA numbers are **exact**: full-statevector probabilities with no noise model and no shot sampling (`src/exact_qaoa.py`, checked against Qiskit's `Statevector`). Every instance's brute-force optimum equals the MILP optimum. The four sweeps ran in parallel, so the times are inflated. Node counts are the cleaner measure.
+
+### MILP effort grows fast on market split
+
+| Family | n = 10 | 15 | 20 | 25 | 30 | 35–50 |
+|---|---|---|---|---|---|---|
+| market_split: median nodes / time | 3 / 0.02 s | 31 / 0.17 s | 1,572 / 0.9 s | 5,992 / 9.3 s | 3 / 5 time out | 5 / 5 time out, **no schedule found at all** |
+| interaction: median nodes / time (MILP variables) | 1 / 0.15 s (55) | 1 / 0.5 s (113) | 13 / 3.1 s (200) | 230 / 19 s (307) | 4 / 5 time out (444) | all time out (606–1,222) |
+| symmetric: median nodes / time | 1 / 0.02 s | 1 | 1 | 1 | 1 | 1 / ≤ 0.13 s |
+
+- **Market split is the real MILP-hard case.** Nodes grow about 3–50× for every 5 added plants. From 35 plants (5 zones) up, HiGHS does not even find one feasible schedule in 30 s.
+- **Interaction is hard for a different reason.** Branching stays small (≤ 671 nodes). The linearized LP grows with n² (1,222 variables at 50 plants), and from 30 plants the 30 s run out after only a few hundred nodes, so each node is expensive.
+- **Symmetry did not hurt HiGHS at all.** Every instance up to 50 plants solved at the root node. Modern presolve and symmetry handling take care of it.
+
+### Exact per-shot chance of the optimum (geometric mean of 5 instances)
+
+| Family | n | MILP | Random | QAOA p=1 | QAOA p=2 | QAOA p=3 | QAOA p=1, transferred angles | SA (1,000 sweeps), per run |
+|---|---|---|---|---|---|---|---|---|
+| market_split | 14 | 0.16 s | 6.1e-5 | 8.6e-5 | 1.9e-4 | 2.0e-4 | 5.3e-5 | 0.008 |
+| market_split | 18 | 0.62 s | 3.8e-6 | 5.0e-6 | 1.3e-5 | 1.3e-5 | 4.1e-6 | 0.001 (4/5 inst.) |
+| market_split | 22 | 3.6 s | 2.4e-7 | 3.5e-7 | 8.6e-7 | 8.0e-7 | 3.5e-7 | 0 (0/5 inst.) |
+| interaction | 14 | 0.17 s | 7.0e-5 | 1.9e-4 | 2.9e-4 | 3.5e-4 | 2.0e-4 | 0.010 |
+| interaction | 18 | 0.54 s | 3.8e-6 | 1.1e-5 | 1.2e-5 | 1.6e-5 | 1.2e-5 | 0.001 |
+| interaction | 22 | 2.5 s | 2.7e-7 | 8.5e-7 | 8.9e-7 | 1.2e-6 | 8.9e-7 | 0 (0/5 inst.) |
+| symmetric | 14 | 0.01 s | 2.6e-3 | 3.2e-3 | 6.8e-3 | 7.2e-3 | 2.3e-3 | 0.099 |
+| symmetric | 22 | 0.09 s | 1.8e-5 | 2.1e-5 | 5.6e-5 | 5.8e-5 | 1.9e-5 | 0.007 (3/5 inst.) |
+
+How fast the chance falls (fit of log₂ p_opt against n, n = 8–22; 1.0 = it halves with every added plant, like random guessing with one optimum):
+
+| Family | Random | QAOA p=1 | p=2 | p=3 |
+|---|---|---|---|---|
+| market_split | 1.00 | 0.98 | 0.97 | 0.97 |
+| interaction | 0.99 | 0.95 | 0.96 | 0.99 |
+| symmetric | 0.70 | 0.73 | 0.68 | 0.68 |
+
+At n = 22 the classical angle tuning took 160–250 s per instance (QAOA p=1–3). The MILP took 2.5–3.6 s.
+
+What this shows:
+
+- **No quantum advantage here, even with a perfect noise-free simulator.** QAOA beats random by a constant factor: 1.5–3.6× on market split and 3–4.5× on interaction at n = 22. But its success chance halves with almost every added plant, just like random guessing (0.95–0.99 vs 1.00 halvings per plant). For a 99% chance of seeing the optimum at 22 plants, QAOA p=2 needs about 5.4 million shots on market split. The MILP proves the optimum in 3.6 s.
+- **The penalty is the problem.** Exact equality constraints make the penalty dwarf the cost, so the QAOA landscape is mostly about feasibility. On market split, almost no probability lands on feasible schedules (p_feasible ≈ 0 at n = 22). On interaction, QAOA raises the feasible share from 0.17 (random) to 0.51–0.71, but the optimum among the feasible schedules is still rare.
+- **Depth helps a little.** p=2 or p=3 doubles to triples p_opt over p=1 on market split and symmetric, but does not change the slope.
+- **Angle transfer works.** Median angles from the next smaller size give the same p_opt as per-instance tuning at p=1 (for example 8.9e-7 vs 8.5e-7 for interaction at n = 22), with zero tuning time. Larger qubit counts (gpu-sv) can use the same transfer.
+- **Single-flip SA on the same QUBO also fails at 22 plants** on market split and interaction (0 optimal runs out of 1,000 on every instance). The feasible schedules are separated by penalty barriers that single bit flips cannot cross. So "QAOA vs SA" on these penalty QUBOs is a contest between two weak methods. The MILP, which handles the constraints directly, wins clearly at these sizes.
+- **Where the MILP does break (market split ≥ 30 plants), QAOA would need far more than the qubits we can simulate exactly.** Extrapolating the slope, p_opt at 35 plants is about 1e-10 (5e-11 at p=1). The interesting question is whether a constraint-preserving mixer (for example an XY mixer that keeps "exactly k on") changes the slope. We have not tested that.
+
 ## What didn't work
 
 -

@@ -87,9 +87,17 @@ def build_qubo(plants, demand_mw, reserve_mw, was_on, penalty=None, n_slack=N_SL
     n_qubits = len(plants) + n_slack
     Q = np.zeros((n_qubits, n_qubits))
     offset = 0.0
-    # TODO 3: add the cost part and the penalty part to Q and offset.
-    # When your lines are in, delete the raise line below.
-    raise NotImplementedError("TODO 3: build the QUBO")
+    # 1. Cost part: switching plant i on costs c[i]. Only plant bits get a cost;
+    #    slack bits are free (they only exist to make the penalty work).
+    for i in range(len(plants)):
+        Q[i, i] += c[i]
+
+    # 2. Penalty part: A * (sum_j b_j y_j - r)^2, expanded using y_j^2 = y_j.
+    for j in range(n_qubits):
+        Q[j, j] += A * (b[j] ** 2 - 2 * r * b[j])          # single terms -> diagonal
+        for k in range(j + 1, n_qubits):
+            Q[j, k] += A * 2 * b[j] * b[k]                 # pair terms -> upper triangle
+    offset += A * r ** 2                                   # constant -> offset
     return Q, offset
 
 

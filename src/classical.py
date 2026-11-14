@@ -21,9 +21,20 @@ def cheapest_first(plants, demand, reserve):
     and which rules it breaks.
     """
     schedule = np.zeros((len(demand), len(plants)), dtype=int)
-    # TODO 1: rank the plants, then fill each hour (see the hints above).
-    # When your lines are in, delete the raise line below.
-    raise NotImplementedError("TODO 1: write the cheapest-first rule")
+    # Cost per MWh if the plant runs flat out: fuel cost plus its fixed hourly cost spread over pmax.
+    pmax = np.array([p["pmax_mw"] for p in plants], dtype=float)
+    full_output_cost = np.array(
+        [p["marginal_cost_per_mwh"] + p["no_load_cost_per_h"] / p["pmax_mw"] for p in plants])
+    order = np.argsort(full_output_cost)  # cheapest first
+
+    for t in range(len(demand)):
+        need = demand[t] + reserve[t]
+        capacity = 0.0
+        for i in order:
+            if capacity >= need:
+                break
+            schedule[t, i] = 1
+            capacity += pmax[i]
     return schedule
 
 

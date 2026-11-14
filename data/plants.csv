@@ -1,0 +1,6 @@
+plant_id,type,pmin_mw,pmax_mw,marginal_cost_per_mwh,no_load_cost_per_h,startup_cost,min_up_h,min_down_h,ramp_mw_per_h,on_at_start,rts_gen_uid,scale
+COAL,coal steam,140,350,21.69,546,36750,24,48,240,1,123_STEAM_3,1.0
+GAS_CC,gas combined cycle,168,350,26.84,206,27650,8,5,245,0,107_CC_1,0.986
+PEAKER_A,gas combustion turbine,20,50,28.89,443,5150,3,3,202,0,113_CT_1,0.909
+PEAKER_B,gas combustion turbine (older),20,50,39.51,749,5150,3,3,202,0,223_CT_4,0.909
+OIL,oil combustion turbine,20,50,101.02,694,130,1,1,450,0,101_CT_1,2.5

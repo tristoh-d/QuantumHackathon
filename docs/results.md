@@ -52,6 +52,8 @@ Command: `python -m experiments.benchmark` and `python -m experiments.shots_swee
 | QAOA p=1, 200 shots | 351,082 | +7.06% | 0 | 3.78 s |
 | Random, 200 shots | 351,082 | +7.06% | 0 | 0.12 s |
 
+QAOA and random give the identical schedule here, which is expected. With 5 plants there are only 32 choices per hour, and 200 random shots miss a given choice with probability (31/32)^200 ≈ 0.2%. Both samplers see every choice, both keep the exact best (24 / 24 hours), and both build the same day. The difference shows at fewer shots and on the 10-plant fleet; see the tables below.
+
 (5 plants, seed 7. 10 plants: QAOA $710,528, +18.00%, 0 rules broken, 10.5 s; random $740,091, +22.91%, 3 rules broken, 0.47 s.)
 
 QAOA vs random (valid days out of seeds, mean gap of valid days), 5 plants, p=1, seeds 0–4, `results/shots_sweep.csv`:

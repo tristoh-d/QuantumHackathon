@@ -1,4 +1,10 @@
+"""Presentation animation: the nuclear plant picks the cheapest customer bid.
+
+Run:  python presentation/cheapest_first_animation.py          (live window)
+      python presentation/cheapest_first_animation.py --save   (writes preview PNGs next to this file)
+"""
 import sys
+from pathlib import Path
 
 import matplotlib
 if "--save" in sys.argv:
@@ -221,6 +227,6 @@ if "--save" in sys.argv:
     for f in (2, len(customers)):
         for i in range(f + 1):
             update(i)
-        fig.savefig(f"/home/claude/preview_{f}.png", dpi=110, facecolor=fig.get_facecolor())
+        fig.savefig(Path(__file__).parent / f"preview_{f}.png", dpi=110, facecolor=fig.get_facecolor())
 else:
     plt.show()

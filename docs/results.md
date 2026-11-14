@@ -111,7 +111,40 @@ What this adds:
 - Even the best QAOA day (+6.48%) is still far from the MILP, for the same reason as on 5 plants: scheduling one hour at a time.
 - The classical price is about 7–20× more wall time than random (simulating QAOA and tuning its angles every hour).
 
-After tuning (layers, penalty, warm start): not run yet.
+### After tuning (layers, penalty, warm start)
+
+Command: `python -m experiments.tuning_sweep` → `results/tuning.csv` (QAOA only, seeds 0–4, about 20 min). Penalty is scaled against its default A = 2 · max c_i, because A changes from hour to hour. "No warm start" re-runs the coarse angle search every hour instead of starting from the previous hour's angles. The un-tuned rows are the p=1 runs above.
+
+5 plants (200 shots left out: every sampler sees all 32 choices there):
+
+| Setting | Shots | Valid days | Mean gap (valid) | Valid-shot share | Best-choice share | Time per day |
+|---|---|---|---|---|---|---|
+| Un-tuned (p=1, A = 1×, warm) | 5 / 10 / 20 / 50 | 0 / 2 / 5 / 5 | — / +11.82 / +8.11 / +7.74% | 0.33 / 0.46 / 0.53 / 0.51 | 0.063 | 3 s |
+| p=2 | 5 / 10 / 20 / 50 | 0 / 1 / 5 / 5 | — / +8.46 / +9.44 / +7.01% | 0.43 / 0.54 / 0.62 / 0.63 | 0.062 | 7 s |
+| p=3 | 5 / 10 / 20 / 50 | 0 / 2 / 5 / 5 | — / +7.86 / +8.22 / +7.53% | 0.47 / 0.61 / 0.65 / 0.63 | 0.079 | 10 s |
+| Penalty 0.5× | 5 / 10 / 20 / 50 | 0 / 1 / 5 / 5 | — / +10.02 / +7.97 / +7.88% | 0.34 / 0.44 / 0.53 / 0.51 | 0.064 | 3 s |
+| Penalty 3× | 5 / 10 / 20 / 50 | 0 / 2 / 3 / 5 | — / +11.82 / +8.65 / +7.74% | 0.31 / 0.46 / 0.48 / 0.51 | 0.062 | 2.5 s |
+| No warm start | 5 / 10 / 20 / 50 | 0 / 0 / 5 / 5 | — / — / +7.27 / +6.30% | 0.25 / 0.40 / 0.48 / 0.49 | 0.060 | 10 s |
+
+10 plants:
+
+| Setting | Shots | Valid days | Mean gap (valid) | Valid-shot share | Best-choice share | Time per day |
+|---|---|---|---|---|---|---|
+| Un-tuned (p=1, 3 slack bits, warm) | 200 / 1000 | 3 / 5 | +12.30 / +7.92% | 0.28 / 0.38 | 0.004 | 9–10 s |
+| p=2 | 200 / 1000 | 4 / 5 | +12.63 / +9.84% | 0.35 / 0.46 | 0.005 | 35–37 s |
+| 4 slack bits | 200 / 1000 | 4 / 5 | +12.88 / +8.73% | 0.27 / 0.38 | 0.004 | 26–31 s |
+| No warm start | 200 / 1000 | 3 / 5 | +13.09 / +8.38% | 0.26 / 0.37 | 0.004 | 37 s |
+
+(Valid days in the 10-plant table are out of 5 seeds; numbers separated by " / " are per shot count. The valid-days column is for 200 shots; at 1000 shots every setting gives 5 / 5.)
+
+What tuning did:
+
+- **More layers improve the samples, not the day.** p=2 and p=3 raise the valid-shot share (0.62–0.65 vs 0.51–0.53 on 5 plants at 20–50 shots; 0.46 vs 0.38 on 10 plants at 1000). p=3 raises the best-choice share from 0.063 to 0.079. The daily gap does not improve consistently, and the run takes 2–4× longer.
+- **The default penalty is the right size.** Halving it or tripling it changes little. Tripling it lowers the valid share at 20 shots (0.48 vs 0.53) and gives fewer valid days (3 / 5 vs 5 / 5).
+- **Warm start helps the samples.** Without it the valid share drops (0.25 vs 0.33 at 5 shots) and no 10-shot day is valid. It is also 3× slower, because of the per-hour grid search.
+- **4 slack bits on 10 plants** let the QUBO absorb up to 15 spare blocks instead of 7, so far fewer allowed choices are penalized. But the valid share does not rise (0.27 / 0.38 vs 0.28 / 0.38), since the probability is spread over twice as many bitstrings, and the run takes 3× the time. No gain.
+- **The cheapest days (no warm start, 50 shots: +6.30%) are below the 7.06% you get from picking every hour's best.** These days do not pick every hour's best (21.2 of 24 hours match on average). A day that matches all 24 hours is exactly the 7.06% day. So a different choice in a few hours happened to save money later in the day. This is the hour-by-hour method's short-sightedness showing up, not a tuning gain.
+- **Conclusion:** keep p=1, the default penalty and warm start for the main runs and hardware (p=1 is also what fits on Forte). Tuning can make each shot more useful, but the daily cost is limited by scheduling one hour at a time, not by the sampler.
 
 After tuning (layers, penalty, warm start): ___
 

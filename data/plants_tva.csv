@@ -1,0 +1,21 @@
+plant_id,type,pmin_mw,pmax_mw,marginal_cost_per_mwh,no_load_cost_per_h,startup_cost,min_up_h,min_down_h,ramp_mw_per_h,on_at_start,rts_gen_uid,scale
+CUMBERLAND_COAL,coal steam,494,2470,21.69,3856,259350,24,48,1694,1,123_STEAM_3,7.057
+KINGSTON_COAL,coal steam,62,1398,21.68,3527,205500,8,8,1623,1,116_STEAM_1,9.019
+GALLATIN_COAL,coal steam,97,967,21.36,636,142150,8,8,1123,1,216_STEAM_1,6.239
+SHAWNEE_COAL,coal steam,54,1206,23.31,426,177280,8,8,1401,1,115_STEAM_3,7.781
+ACKERMAN_CC,natural gas combined cycle,113,705,28.55,797,55700,8,5,493,1,318_CC_1,1.986
+ALLEN_CC,natural gas combined cycle,176,1100,25.41,2859,86910,8,5,770,1,313_CC_1,3.099
+CALEDONIA_CC,natural gas combined cycle,122,765,28.59,669,60440,8,5,535,1,213_CC_3,2.155
+JOHN_SEVIER_CC,natural gas combined cycle,140,880,27.53,238,69520,8,5,616,1,321_CC_1,2.479
+LAGOON_CREEK_CC,natural gas combined cycle,251,525,27.6,154,41480,8,5,367,1,118_CC_1,1.479
+MAGNOLIA_CC,natural gas combined cycle,147,920,25.41,2391,72680,8,5,644,1,313_CC_1,2.592
+PARADISE_CC,natural gas combined cycle,180,1130,26.84,666,89280,8,5,791,1,107_CC_1,3.183
+SOUTHAVEN_CC,natural gas combined cycle,124,774,26.84,456,61150,8,5,542,1,107_CC_1,2.18
+BROWNSVILLE_CT,natural gas (dual-fuel in some) combustion turbine,47,468,29.05,3821,48210,3,3,1889,0,123_CT_1,8.509
+COLBERT_CT,natural gas (dual-fuel in some) combustion turbine,20,392,39.51,5869,40380,3,3,1582,0,223_CT_4,7.127
+GALLATIN_CT,natural gas (dual-fuel in some) combustion turbine,30,600,30.86,5050,61800,3,3,2422,0,307_CT_1,10.909
+GLEASON_CT,natural gas (dual-fuel in some) combustion turbine,62,465,28.89,4116,47900,3,3,1877,0,113_CT_1,8.455
+JOHNSONVILLE_CT,natural gas (dual-fuel in some) combustion turbine,23,1133,33.83,7727,116700,3,3,4573,0,301_CT_3,20.6
+KEMPER_CT,natural gas (dual-fuel in some) combustion turbine,31,312,25.91,2619,32140,3,3,1259,0,322_CT_5,5.673
+LAGOON_CREEK_CT,natural gas (dual-fuel in some) combustion turbine,30,904,28.6,9657,93120,3,3,3649,0,215_CT_4,16.436
+MARSHALL_CT,natural gas (dual-fuel in some) combustion turbine,31,621,28.38,2935,63970,3,3,2507,0,315_CT_6,11.291

@@ -58,6 +58,62 @@ OIL has the biggest change (20 MW to 50 MW) so that it counts as one full block.
 - `reserve_mw` = 10% of demand, rounded to the nearest MW.
 - `demand10.csv` is the same curve times 1500/850 (the 10-plant fleet's capacity over the 5-plant fleet's), with its own 10% reserve.
 
+## TVA fleet and TVA demand days
+
+Built by `make_tva.py` (`python data/make_tva.py all`; downloads go to the gitignored `data/.cache/`).
+You do not need to run it. For the benchmark: `python -m experiments.benchmark --fleet tva --day peak`
+or `--all-days`; in code, `load_problem("tva", day=...)` and `src.demand.sample_days(...)`.
+
+| File | What it is |
+|---|---|
+| `tva_real_plants.json` | Hand-collected list of TVA plants (capacities, units, roles); its cost fields are null |
+| `plants_tva.csv` | The 20 dispatchable thermal plants (4 coal, 8 gas CC, 8 gas CT), same columns as `plants.csv` |
+| `tva_hourly.csv` | Every usable day of TVA hourly load from EIA-930, July 2018 to June 2026, with its net load |
+| `demand_tva/*.csv` | 42 saved days in `demand.csv` format: 5 per season x weekday/weekend, plus `peak` and `min` |
+| `demand_tva/index.csv` | The source date, season, day type, peak and minimum of each saved day |
+| `tva_meta.json` | Archetype per plant, QAOA block size, day counts (kept / dropped and why) |
+
+### Plants
+
+- Only `uc_role` = `dispatchable_thermal` or `dispatchable_peaker` become rows. Nuclear, hydro and
+  Raccoon Mountain pumped storage are not plants here: their real output is taken out of the demand (below).
+- The JSON has no costs, so each plant borrows them from an RTS-GMLC unit of the same kind (an
+  *archetype*), with the same formulas as `make_data.py`:
+  - coal: the RTS unit closest in size to one TVA unit (350 MW or 155 MW class);
+  - gas CC and CT: plants sorted by commissioning year, the newest gets the archetype with the lowest
+    marginal cost. RTS units with a negative derived no-load cost, and `218_CC_1` (no-load about 10x the
+    other CC units), are not used.
+- `pmax_mw` = the plant's capacity. `pmin_mw` = the archetype's minimum for **one** unit
+  (capacity / units), because a plant can run on a single unit.
+- No-load cost, startup cost and ramp rate are scaled by `scale` = capacity / archetype pmax.
+  Marginal cost and min up/down times are the archetype's.
+- `on_at_start`: coal and CC 1, CT 0.
+
+### Demand
+
+- Source: EIA-930 (Hourly Electric Grid Monitor) six-month bulk BALANCE files, balancing authority `TVA`,
+  July 2018 (when generation by fuel starts) to the last complete half-year. Only TVA rows are kept.
+- Day = local Data Date, hours 1 to 24 become 0 to 23. EIA's "Adjusted" values are used when present.
+- `net_load_mw` = demand - nuclear - hydro (incl. pumped storage, so pumping adds load) - solar - wind -
+  storage - geothermal - other. This is what the thermal fleet must cover, and it is the `demand_mw` of the
+  saved days. `reserve_mw` = 10% of it.
+- Dropped: days without exactly 24 hours (DST changes), with a missing value, with net load <= 0, or with a
+  one-hour jump above 30% of the day's maximum. Counts are in `tva_meta.json`.
+- `src/demand.py` also leaves out days the fleet cannot cover (max of net load + reserve above the
+  17,735 MW capacity): 228 of 2,888 days, mostly summer and winter peaks, when TVA also buys power.
+- Bootstrapping: whole real days drawn at random within a season (Dec-Feb winter, Mar-May spring,
+  Jun-Aug summer, Sep-Nov fall) and day type (Sat/Sun = weekend). The saved sets use seed 2026.
+
+### QAOA
+
+The QUBO counts capacity in blocks. 50 MW blocks would need far too many qubits for this fleet, so the
+TVA fleet uses the smallest block from 100, 150, ... 500 MW that keeps plants + slack bits at 30 or fewer:
+100 MW, 5 slack bits, 25 qubits. `Problem.block_view()` rescales the problem so `src/qubo.py` (fixed
+50 MW blocks) works unchanged. 25 qubits is still more than a laptop can simulate with this code
+(`MAX_LOCAL_QUBITS` = 20), so the benchmark runs only MILP and the rule on this fleet.
+
+EIA-930 data is published by the U.S. Energy Information Administration and is in the public domain.
+
 ## License and credit
 
 RTS-GMLC has no separate LICENSE file. Its README carries the data use agreement below, which lets anyone use, copy and distribute the data for any purpose without fee, provided the notice travels with the data and DOE/NREL/ALLIANCE are credited in publications. The files here are derived from RTS-GMLC; credit: **DOE/NREL/ALLIANCE, RTS-GMLC**.

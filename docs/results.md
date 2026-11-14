@@ -171,6 +171,140 @@ Also in `results/hardware_runs.csv` (written automatically by `src/hardware.py`)
 
 Commands: `python -m experiments.benchmark --fleet 5` and `--fleet 10` (seed 7, 200 shots, p=1). Hardware time is from the ionq-sim run in the Milestone 5 table.
 
+## Real TVA data: fleet and demand days
+
+The 5- and 10-plant fleets have one demand day each. To test on many real days, we added:
+
+- **The TVA fleet**, `data/plants_tva.csv`: TVA's 20 coal, gas CC and gas CT plants (17,735 MW), with costs borrowed from RTS-GMLC units of the same kind.
+- **TVA demand days**, `data/tva_hourly.csv`: 2,888 real days of TVA hourly load (EIA-930, July 2018 to June 2026), minus TVA's own nuclear, hydro, pumped storage, wind and solar output. What is left (net load) is what the thermal plants must cover. 2,660 of those days fit the fleet's capacity with the 10% reserve; the rest (mostly summer and winter peaks) are left out.
+- **Bootstrapping**: days are drawn at random from one season (winter Dec–Feb, spring Mar–May, summer Jun–Aug, fall Sep–Nov) and day type (weekday or weekend).
+
+How the data was built: `data/README.md`. Raw rows of both runs below: `results/tva_classical.csv`, `results/tva_quantum5.csv`.
+
+### Classical: MILP vs cheapest-first rule on the 20-plant TVA fleet
+
+Command: `python -m experiments.tva_benchmark classical` (30 days per season and day type, 240 days, day seed 11). QAOA is not run here: the TVA fleet needs 25 qubits (100 MW blocks + 5 slack bits), and our simulator code keeps tables of 2^n_qubits rows, which needs several GB at 25 qubits.
+
+| Season | Day type | Days | Rule gap mean [95% CI] | Median | Worst | Days with broken rules | MILP time avg / max |
+|---|---|---|---|---|---|---|---|
+| winter | weekday | 30 | +4.71% [+3.62, +6.02] | +4.25% | +18.49% | 97% | 0.84 / 4.34 s |
+| winter | weekend | 30 | +5.29% [+3.96, +6.85] | +3.94% | +17.12% | 93% | 0.57 / 2.63 s |
+| spring | weekday | 30 | +5.54% [+4.50, +6.59] | +5.12% | +12.42% | 90% | 0.67 / 2.65 s |
+| spring | weekend | 30 | +7.88% [+5.81, +10.28] | +5.11% | +31.40% | 93% | 0.46 / 1.08 s |
+| summer | weekday | 30 | +4.20% [+3.63, +4.76] | +4.23% | +7.49% | 93% | 1.24 / 4.68 s |
+| summer | weekend | 30 | +4.53% [+4.03, +5.03] | +4.87% | +6.75% | 77% | 1.24 / 4.27 s |
+| fall | weekday | 30 | +4.83% [+4.08, +5.64] | +4.48% | +11.55% | 93% | 0.73 / 2.71 s |
+| fall | weekend | 30 | +6.46% [+4.63, +8.72] | +5.09% | +27.57% | 93% | 0.61 / 4.87 s |
+| **all** | | 240 | **+5.43%** [+4.96, +5.96] | +4.81% | +31.40% | 91% | 0.79 / 4.87 s |
+
+(95% CI: bootstrap of the mean over the days, 2,000 resamples.)
+
+What this shows:
+
+- **The rule is about 5% above the optimum on real TVA days**, close to its +4.87% on the 10-plant fleet and much worse than its +0.81% on the 5-plant fleet. One hand-picked day made the rule look better than it is.
+- **It breaks a rule on 91% of days, and every broken rule is a min up or min down time** (in a 60-day sample: 90 min up, 90 min down). Same cause as in Milestone 2: the rule has no memory of the previous hours.
+- **Low, flat days are the worst, not peak days.** The gap is more strongly linked to a low daily minimum (correlation −0.54) than to the peak (−0.40). The worst day, 2020-04-04 (spring weekend, net load 2,500–3,200 MW all day), is +31.4%. Energy cost is almost the same as the MILP's ($1.540M vs $1.542M), but the rule starts SHAWNEE_COAL 3 times as load moves around its threshold, at $177k a start: $532k of startups the MILP avoids by leaving the plant off (MILP: 0 startups).
+- **Summer is the most predictable** (narrow CI, worst day +7.5%). Spring and fall weekends have the widest spread: their low loads put whole coal plants near the on/off threshold.
+- **The MILP stays fast at real scale**: 0.8 s per day on average, 4.9 s at most, for 20 plants × 24 hours.
+
+### Quantum: TVA load shapes on the 5-plant fleet
+
+Command: `python -m experiments.tva_benchmark quantum` (5 days per season and day type, 40 days, day seed 11; QAOA p=1, sampler seed 7). Each TVA day is scaled linearly so the TVA fleet's capacity (17,735 MW) maps to the 5-plant fleet's 850 MW. QAOA stays at 8 qubits but is tested on 40 real load shapes instead of one.
+
+| Method | Shots | Valid days | Gap, all days (mean [95% CI]) | Gap, valid days | Hours matching best (of 24) | Time per day |
+|---|---|---|---|---|---|---|
+| Cheapest-first rule | — | 25 / 40 | +5.90% [+3.20, +8.86] | +2.41% | — | — |
+| QAOA p=1 | 20 | 19 / 40 | +22.62% [+17.79, +27.34] | +15.69% | 14.2 | 3.8 s |
+| Random | 20 | 7 / 40 | +27.51% [+24.16, +30.81] | +28.92% | 10.4 | 0.0 s |
+| QAOA p=1 | 200 | 40 / 40 | +4.90% [+3.65, +6.22] | +4.90% | 23.8 | 3.7 s |
+| Random | 200 | 40 / 40 | +4.60% [+3.45, +5.84] | +4.60% | 23.9 | 0.2 s |
+
+Same day, both valid: at 200 shots QAOA and random give the same cost on 34 of 40 days, QAOA is cheaper on 2 and random on 4 (mean difference +0.30 points against QAOA). At 20 shots only 5 days are valid for both.
+
+What this shows:
+
+- **The Milestone 4 result holds on 40 real days.** At 20 shots QAOA finds a valid day almost 3× as often as random (19 vs 7 of 40) and matches the hour's best choice in more hours (14.2 vs 10.4 of 24). At 200 shots both samplers see nearly all 32 choices each hour, and the classical scoring step decides the day.
+- **At 200 shots QAOA is not better than random** (+4.90% vs +4.60%). They differ on only 6 of 40 days. QAOA matches the hour's best slightly less often (23.8 vs 23.9 hours): it puts little probability on some choices, so 200 shots can miss one, while random spreads shots evenly over all 32. A missed hour changes who is on later, so the effect on the day can go either way (QAOA cheaper on 2 days, random on 4).
+- **Hour by hour at 200 shots (+4.6–4.9%) beats the cheapest-first rule on average (+5.90%) and never breaks a rule** (40 / 40 valid vs 25 / 40). The rule breaks min up / min down times on 15 days; on the days it is valid, it is cheaper (+2.41%).
+- **The gap on the single original day (+7.06%) was on the high side.** Over 40 real shapes the hour-by-hour gap averages about 4.6–4.9%, with a wide spread (CI ±1.3 points).
+
+### Quantum: the same TVA load shapes on the 10-plant fleet
+
+Command: `python -m experiments.tva_benchmark quantum --fleet 10 --shots 200 1000` → `results/tva_quantum10.csv`. The same 40 dates as the 5-plant run, scaled so 17,735 MW maps to the 10-plant fleet's 1,500 MW. QAOA p=1, 3 slack bits, 13 qubits, sampler seed 7.
+
+| Method | Shots | Valid days | Gap, all days (mean [95% CI]) | Gap, valid days | Hours matching best (of 24) | Time per day |
+|---|---|---|---|---|---|---|
+| Cheapest-first rule | — | 22 / 40 | +4.63% [+3.20, +6.19] | +1.81% | — | — |
+| QAOA p=1 | 200 | 38 / 40 | +25.12% [+20.47, +30.29] | +23.89% | 8.4 | 16.2 s |
+| Random | 200 | 22 / 40 | +36.31% [+32.24, +40.45] | +39.90% | 3.2 | 0.9 s |
+| QAOA p=1 | 1000 | 39 / 40 | +15.18% [+12.90, +17.52] | +15.41% | 19.7 | 17.9 s |
+| Random | 1000 | 37 / 40 | +16.53% [+14.28, +18.84] | +16.36% | 15.8 | 2.8 s |
+
+Same day, both valid: at 200 shots (21 days) QAOA is cheaper on 16 and random on 5, mean −7.4 points for QAOA; at 1000 shots (37 days) QAOA is cheaper on 22 and random on 15, mean −0.5 points. At 200 shots, 17 days are valid for QAOA but not for random (1 the other way).
+
+Side by side (same 40 dates; the "enough shots" row is 200 shots on 5 plants and 1000 on 10 plants):
+
+| | 5 plants (8 qubits, 32 choices / hour) | 10 plants (13 qubits, 1,024 choices / hour) |
+|---|---|---|
+| Rule: valid days, mean gap | 25 / 40, +5.90% | 22 / 40, +4.63% |
+| Few shots (20 / 200): QAOA vs random valid days | 19 vs 7 | 38 vs 22 |
+| Few shots: QAOA vs random hours matching best | 14.2 vs 10.4 | 8.4 vs 3.2 |
+| Enough shots (200 / 1000): QAOA vs random mean gap | +4.90% vs +4.60% | +15.18% vs +16.53% |
+| Enough shots: hours matching best | 23.8 vs 23.9 | 19.7 vs 15.8 |
+| QAOA time per day | 3.7 s | 16–18 s |
+
+What the comparison shows:
+
+- **QAOA's advantage grows with the fleet.** On 5 plants, 200 shots see all 32 choices and QAOA ties random. On 10 plants, 1000 shots do not see all 1,024 choices, and QAOA matches the hour's best in 19.7 hours vs 15.8 for random. At 200 shots the difference is large: 38 vs 22 valid days, and 7 points cheaper on the days both are valid.
+- **But on 10 plants hour by hour is far from the optimum on real days.** At 1000 shots QAOA averages +15.2%, about twice its +7.92% on the single original 10-plant day (Milestone 4, 5 seeds). The original day was an easy one for the 10-plant fleet; real shapes cost the greedy loop much more. On the same dates the 10-plant QAOA gap is 10.4 points higher than the 5-plant one.
+- **The cheapest-first rule beats every sampled method on cost** (+4.63% over all days), but it breaks min up / min down times on 18 of 40 days. QAOA at 1000 shots is valid on 39 of 40. The rule's gaps on the two fleets go together (correlation 0.67 per day): the same real shapes are hard for it on both.
+- **No season stands out for invalid QAOA days** (2 at 200 shots, 1 at 1000). Random's invalid days at 200 shots are mostly summer (9 of 18) and winter (5); we have not checked why.
+- **Takeaway:** QAOA's sampling advantage only shows up once the choice space is too big to cover with shots (10 plants). At that size, scheduling one hour at a time leaves 15% on the table. A multi-hour formulation matters more than a better sampler.
+
+### Simulated backends: noise and depth on TVA load shapes (5-plant fleet)
+
+Command: `python -m experiments.tva_sims run --config <name>` for each config (we ran the 7 in parallel), then `python -m experiments.tva_sims summary` → `results/tva_sims_<config>.csv`. Same 40 TVA dates as above, scaled to the 5-plant fleet; every day scored against its own MILP; sampler seed 7; 20 and 50 shots (at 200 shots every sampler sees all 32 choices, see above).
+
+In every config the angles are tuned on the noise-free statevector, as before a hardware run. Only the distribution the shots are drawn from changes. Noisy configs use an Aer density-matrix simulation of the circuit transpiled to rz / sx / x / cx (56 CX at p=1), with depolarizing gate noise and readout error:
+
+| Config | 1-qubit error | 2-qubit error | Readout error | Distance from ideal distribution (hour 12, p=1) |
+|---|---|---|---|---|
+| ideal | 0 | 0 | 0 | 0 |
+| forte (near IonQ Forte-1's published figures) | 0.02% | 0.4% | 0.5% | 0.05 |
+| noisy | 0.1% | 2% | 2% | 0.21 |
+| vnoisy | 0.2% | 5% | 3% | 0.38 |
+
+(Distance = total variation distance between the noisy and the ideal probabilities over the 256 bitstrings.)
+
+| Config | Shots | Valid days | Gap vs MILP, all days (mean [95% CI]) | Gap, valid days | Valid-shot share | Best-choice share | Hours matching best (of 24) |
+|---|---|---|---|---|---|---|---|
+| ideal p=1 | 20 | 19 / 40 | +22.62% [+17.79, +27.34] | +15.69% | 0.34 | 0.051 | 14.2 |
+| ideal p=2 | 20 | 25 / 40 | +22.60% [+17.38, +28.23] | +13.68% | 0.49 | 0.080 | 15.4 |
+| forte p=1 | 20 | 16 / 40 | +24.28% [+18.96, +29.99] | +21.90% | 0.34 | 0.048 | 13.7 |
+| forte p=2 | 20 | **32 / 40** | **+16.55%** [+12.71, +20.59] | +13.77% | 0.50 | 0.072 | 15.8 |
+| noisy p=1 | 20 | 17 / 40 | +23.84% [+19.03, +28.96] | +17.05% | 0.30 | 0.042 | 12.7 |
+| vnoisy p=1 | 20 | 12 / 40 | +23.08% [+18.11, +28.32] | +15.02% | 0.27 | 0.037 | 13.2 |
+| random | 20 | 7 / 40 | +27.51% [+24.16, +30.81] | +28.92% | 0.19 | 0.031 | 10.4 |
+| ideal p=1 | 50 | 37 / 40 | +8.82% [+6.97, +10.90] | +8.29% | 0.45 | 0.051 | 20.4 |
+| ideal p=2 | 50 | 40 / 40 | +5.98% [+4.42, +7.73] | +5.98% | 0.67 | 0.081 | 22.7 |
+| forte p=1 | 50 | 36 / 40 | +8.00% [+6.32, +9.97] | +8.17% | 0.44 | 0.047 | 19.7 |
+| forte p=2 | 50 | 40 / 40 | **+5.61%** [+4.24, +7.09] | +5.61% | 0.61 | 0.072 | 22.2 |
+| noisy p=1 | 50 | 39 / 40 | +8.18% [+6.29, +10.35] | +7.44% | 0.40 | 0.042 | 20.2 |
+| vnoisy p=1 | 50 | 37 / 40 | +7.61% [+6.23, +9.02] | +7.62% | 0.37 | 0.037 | 19.9 |
+| random | 50 | 30 / 40 | +8.56% [+7.22, +10.18] | +7.34% | 0.30 | 0.031 | 20.5 |
+
+Same day, both valid, against ideal p=1 at 50 shots: p=2 is cheaper on 23 of 37 days (mean −2.32 points), forte p=2 on 23 of 37 (−2.58). The p=1 noise levels are a coin flip against ideal p=1 (forte 15 cheaper / 18 dearer, noisy 18 / 16, vnoisy 19 / 14; means within ±1 point).
+
+Time per day is not in the table: the 7 configs ran at the same time and slowed each other down (ideal p=1 took 11.9 s per day here vs 3.7 s alone). Noisy runs add an 8-qubit density-matrix simulation per hour, about 0.05–0.1 s.
+
+What this shows:
+
+- **Noise wears down QAOA's sample quality step by step, toward random.** At p=1 the valid-shot share goes 0.34 (ideal) → 0.34 (forte) → 0.30 (noisy) → 0.27 (vnoisy) → 0.19 (random), and the best-choice share 0.051 → 0.048 → 0.042 → 0.037 → 0.031. Even at 5% two-qubit error, QAOA still finds more valid 20-shot days than random (12 vs 7).
+- **Forte-level noise costs almost nothing.** The valid-shot share is unchanged and the best-choice share drops by 6%. Its 20-shot valid days (16 vs 19) and 50-shot gap (+8.00% vs +8.82%) are inside run-to-run spread. A Forte-1 run of this circuit should look like the simulator.
+- **Depth helps more than noise hurts.** p=2 has twice the CX gates but raises the valid share to 0.49–0.67 and the best-choice share to 0.07–0.08, with or without Forte noise. At 50 shots both p=2 configs are valid on 40 / 40 days and are the only configs clearly better than random (+5.6–6.0% vs +8.56%; their CIs only just overlap random's, whose lower end is +7.22%). At 20 shots forte p=2 has the most valid days (32 vs 25 for ideal p=2). That difference comes from one sampler seed; we would not read it as noise helping.
+- **At 50 shots, p=1 QAOA is no better than random on daily cost** (+7.6–8.8% vs +8.56%, overlapping CIs), even though its samples are better. 50 shots on 32 choices already finds the hour's best most of the time (20.4 vs 20.5 hours for ideal p=1 vs random). The classical scoring step does most of the work, as in Milestone 4.
+- **Compared with the MILP**, the best simulated setting (p=2, 50 shots) is +5.6–6.0% on real days. That is close to the 200-shot hour-by-hour gap (+4.6–4.9%) and to the cheapest-first rule (+5.90%, but valid on only 25 / 40 days). The remaining gap is the hour-by-hour method, not the backend.
+
 ## What didn't work
 
 -

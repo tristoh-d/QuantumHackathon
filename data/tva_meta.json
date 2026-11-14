@@ -1,0 +1,68 @@
+{
+ "plants": {
+  "n_plants": 20,
+  "capacity_mw": 17735,
+  "archetypes": {
+   "CUMBERLAND_COAL": "123_STEAM_3",
+   "KINGSTON_COAL": "116_STEAM_1",
+   "GALLATIN_COAL": "216_STEAM_1",
+   "SHAWNEE_COAL": "115_STEAM_3",
+   "ALLEN_CC": "313_CC_1",
+   "PARADISE_CC": "107_CC_1",
+   "JOHN_SEVIER_CC": "321_CC_1",
+   "LAGOON_CREEK_CC": "118_CC_1",
+   "ACKERMAN_CC": "318_CC_1",
+   "CALEDONIA_CC": "213_CC_3",
+   "MAGNOLIA_CC": "313_CC_1",
+   "SOUTHAVEN_CC": "107_CC_1",
+   "KEMPER_CT": "322_CT_5",
+   "MARSHALL_CT": "315_CT_6",
+   "LAGOON_CREEK_CT": "215_CT_4",
+   "GLEASON_CT": "113_CT_1",
+   "BROWNSVILLE_CT": "123_CT_1",
+   "GALLATIN_CT": "307_CT_1",
+   "JOHNSONVILLE_CT": "301_CT_3",
+   "COLBERT_CT": "223_CT_4"
+  },
+  "block_mw": 100,
+  "n_slack": 5,
+  "n_qubits": 25,
+  "max_sim_qubits": 30
+ },
+ "demand": {
+  "source": "EIA-930 bulk BALANCE files, balancing authority TVA",
+  "first_day": "2018-07-07",
+  "last_day": "2026-06-30",
+  "days_raw": 2922,
+  "days_kept": 2888,
+  "dropped": {
+   "not_24_hours": 16,
+   "missing_value": 0,
+   "nonpositive": 16,
+   "jump": 2
+  },
+  "reserve_share": 0.1,
+  "max_jump_share": 0.3
+ },
+ "pool": {
+  "days_total": 2888,
+  "days_feasible": 2660,
+  "days_infeasible": 228,
+  "capacity_mw": 17735.0,
+  "per_stratum": {
+   "winter_weekday": 476,
+   "winter_weekend": 192,
+   "spring_weekday": 520,
+   "spring_weekend": 203,
+   "summer_weekday": 391,
+   "summer_weekend": 186,
+   "fall_weekday": 499,
+   "fall_weekend": 193
+  }
+ },
+ "sets": {
+  "seed": 2026,
+  "per_stratum": 5,
+  "files": 42
+ }
+}

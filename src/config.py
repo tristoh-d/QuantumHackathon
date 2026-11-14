@@ -4,6 +4,7 @@ Everything that the upstream starter notebook kept as globals (plants, demand,
 reserve, N, names, hours, COLORS) lives here so every module, script, test and
 notebook uses the same values.
 """
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -14,6 +15,27 @@ from src.check import load_demand, load_plants
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "data"
 RESULTS_DIR = REPO_ROOT / "results"
+
+
+def load_env(path=REPO_ROOT / ".env"):
+    """Read KEY=value lines from the repo's .env into os.environ (variables already set win).
+
+    This is how a local run gets QBRAID_API_KEY; in qBraid Lab there is no .env and the
+    account's own credentials are used.
+    """
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        value = value.strip().strip('"').strip("'")
+        if value:
+            os.environ.setdefault(key.strip(), value)
+
+
+load_env()
 
 # Fleets: "5" is the main track, "10" is the stretch goal.
 FLEETS = {

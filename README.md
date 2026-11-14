@@ -19,6 +19,9 @@ pytest                                              # TODO tests skip until impl
 
 In qBraid Lab, use the **qBraid-SDK (v0.12.2)** kernel and open `notebooks/starter.ipynb`.
 
+To send qBraid jobs from your own machine instead, copy `.env.example` to `.env` and paste your API key from
+[account.qbraid.com](https://account.qbraid.com) after `QBRAID_API_KEY=`. `.env` is git-ignored; `src/config.py` loads it.
+
 ## Where the work is (the TODOs)
 
 | TODO | File | Milestone | Test |

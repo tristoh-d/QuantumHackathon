@@ -76,6 +76,21 @@ def record_in_results_md(add=True, **cells):
     print(f"{action} row for this job in docs/{RESULTS_MD.name}")
 
 
+def require_qbraid():
+    """Stop early with a clear message if qBraid can't be used from here (before minutes of tuning)."""
+    import importlib.util
+    import os
+    from pathlib import Path
+
+    if importlib.util.find_spec("qbraid") is None:
+        sys.exit("qBraid SDK not installed in this Python. Run:  pip install -r requirements.txt\n"
+                 "(or use --device aer for a local run).")
+    has_config = (Path.home() / ".qbraid" / "qbraidrc").exists()
+    if not (os.environ.get("QBRAID_API_KEY") or os.environ.get("QBRAID_ACCESS_TOKEN") or has_config):
+        sys.exit("No qBraid API key found. Put it in .env as  QBRAID_API_KEY=...  (copy .env.example),\n"
+                 "or run  qbraid configure.  Get the key at https://account.qbraid.com.")
+
+
 def _queue_time(seconds):
     m, s = divmod(int(seconds), 60)
     h, m = divmod(m, 60)
@@ -201,6 +216,8 @@ def cmd_run(args):
         sys.exit(f"{device_id} is real hardware and uses credits. Tune on aer / ionq-sim first, "
                  "then re-run with --i-am-sure.")
 
+    if device_id is not None:
+        require_qbraid()
     qc, meta, score, plot = TASKS[args.task](args)
     print(f"{meta['desc']}: {qc.num_qubits} qubits, {meta['cx']} CX gates after transpiling")
 
@@ -250,6 +267,7 @@ def _submitted_row(job_id):
 
 def cmd_fetch(args):
     """Check on a submitted job; if it finished, save its counts and log it as completed."""
+    require_qbraid()
     from qbraid.runtime import QbraidJob
 
     job = QbraidJob(args.job_id)

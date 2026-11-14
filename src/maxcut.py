@@ -10,7 +10,7 @@ do, and how the Max-Cut cost relates to the unit-commitment QUBO.
 from itertools import product
 
 import numpy as np
-from scipy.optimize import minimize  # noqa: F401  (used by the optimizer TODO)
+from scipy.optimize import minimize
 
 # 6-node grid (2 x 3) for Part 1
 EDGES_SMALL = [(0, 1), (1, 2), (3, 4), (4, 5), (0, 3), (1, 4), (2, 5)]
@@ -49,10 +49,12 @@ def qaoa_circuit(params, n, edges, p):
     qc.h(range(n))                    # start in equal superposition
     for layer in range(p):
         # --- Cost layer ---
-        # TODO: for each edge (u, v), apply the Max-Cut cost rotation.
-        # Hint: cx(u, v); rz(2 * gammas[layer], v); cx(u, v)
-        # When your lines are in, delete the raise line below.
-        raise NotImplementedError("Implement the cost layer")
+        # exp(-i * gamma * Z_u Z_v) per edge: the CX pair turns Z_v into Z_u Z_v, so the RZ
+        # adds a phase that depends on whether u and v are in the same group or not.
+        for (u, v) in edges:
+            qc.cx(u, v)
+            qc.rz(2 * gammas[layer], v)
+            qc.cx(u, v)
 
         # --- Mixer layer (provided) ---
         for q in range(n):
@@ -74,19 +76,24 @@ def expected_cut(params, n, edges, p, shots=512):
 
 
 # ---------------------------------------------------------------- TODO (primer): optimizer
-def optimize(n, edges, p=1):
+def optimize(n, edges, p=1, n_starts=5, seed=None):
     """Tune the QAOA angles. Returns a scipy OptimizeResult (use result.x for the angles).
 
-    We minimize the NEGATIVE average cut.
+    We minimize the NEGATIVE average cut. A single random start can stall on a poor answer,
+    so we try `n_starts` random starting angles and keep the best result.
     """
     def objective(params):
         return -expected_cut(params, n, edges, p)
 
-    # TODO: choose a starting point and call scipy.optimize.minimize.
-    # Hint: x0 = np.random.rand(2 * p); result = minimize(objective, x0, method="COBYLA")
-    # One random start often stalls on a poor answer. Try a few starts and keep the best one.
-    # When your lines are in, delete the raise line below.
-    raise NotImplementedError("Run the optimizer, then read out the best partition")
+    rng = np.random.default_rng(seed)
+    best = None
+    for _ in range(n_starts):
+        # gamma in [0, pi], beta in [0, pi/2] covers one period of each angle
+        x0 = np.concatenate([rng.uniform(0, np.pi, p), rng.uniform(0, np.pi / 2, p)])
+        result = minimize(objective, x0, method="COBYLA", options={"maxiter": 100})
+        if best is None or result.fun < best.fun:
+            best = result
+    return best
 
 
 # ---------------------------------------------------------------- provided

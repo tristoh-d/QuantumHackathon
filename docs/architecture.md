@@ -23,6 +23,7 @@ experiments/          python -m experiments.<name>   (run from the repo root)
   hour_check.py       QUBO brute force vs exact best, per hour                              (milestone 3)
   shots_sweep.py      QAOA vs random × shots × seeds → results/shots_sweep.csv              (milestone 4, required)
   hardware_run.py     one hour on a qBraid device, logged to results/hardware_runs.csv      (milestone 5)
+  qbraid_driver.py    any task (uc / maxcut) on aer, a qBraid simulator or a QPU; devices, run, fetch
 tests/                pytest; tests for unfinished TODOs SKIP with the TODO named
 reference/upstream/   untouched copies of the organizers' notebooks, check.py and README
 results/              outputs of experiments (keep job IDs here)

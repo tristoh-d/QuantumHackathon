@@ -41,6 +41,16 @@ python -m experiments.hardware_run --dry-run # build circuit + Aer only         
 python -m experiments.hardware_run           # IonQ free simulator, forte-1 noise
 ```
 
+One driver covers every qBraid run, for both the UC hour and the Max-Cut primer. Angles are tuned locally and only the final circuit is sent:
+
+```bash
+python -m experiments.qbraid_driver devices                                # live status + queue depth
+python -m experiments.qbraid_driver run --task uc --device ionq-sim        # or aer, quantinuum-emu, gpu-sv
+python -m experiments.qbraid_driver run --task maxcut --device gpu-sv --grid large --shots 2048
+python -m experiments.qbraid_driver run --task uc --device ionq-qpu --i-am-sure --no-wait   # real QPU
+python -m experiments.qbraid_driver fetch <JOB_ID>                         # collect a queued job later
+```
+
 Add `--fleet 10` for the 10-plant stretch goal. QPU runs need `--device ionq-qpu --i-am-sure` (credits, ≤ 200 shots, send early).
 
 ## Layout

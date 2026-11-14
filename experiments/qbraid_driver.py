@@ -66,7 +66,12 @@ def prepare_uc(args):
         return share
 
     def plot(sim_share, hw_share, hw_label):
-        import matplotlib
+        try:
+            import matplotlib
+        except ImportError:
+            print("(chart skipped: matplotlib not installed; `pip install matplotlib` to get it. "
+                  "Counts are already saved in results/.)")
+            return
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 

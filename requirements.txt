@@ -1,1 +1,16 @@
+# Core (classical baseline, checker, plots)
+numpy
+scipy>=1.9          # scipy.optimize.milp (HiGHS)
+matplotlib
+
+# QAOA (simulator) - same Aer pin as the organizers' notebook
+qiskit
+qiskit-aer==0.18.2
+
+# qBraid runtime for IonQ / Quantinuum / GPU runs.
+# Pre-installed in qBraid Lab's "qBraid-SDK (v0.12.2)" kernel; only needed locally for hardware runs.
+# qbraid
+
+# Dev
 pytest
+ipykernel

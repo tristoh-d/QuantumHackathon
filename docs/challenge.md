@@ -87,3 +87,24 @@ a better hour cost (measure where TODO 2's approximation fails).
 
 **Tools worth building:** schedule viewer with broken rules flagged · "what if" tool (demand, fuel prices, reserve) · dashboard comparing
 MILP / rule / QAOA on cost and time · visual of how one hour's QAOA answer changes with layers, shots, noise.
+
+# Triston Writeup
+
+# Challenge
+
+We need to decide which power plants we should turn on, and when, so we can meet 'tomorrows' electricity needs at the lowest total cost? 
+
+Comparing the classical solution to the quantum solution should show that the quantum solution has a benefit, if it does not then we need to pivot ideas.
+
+Any tangible benefit such as time saved from classical algorithms to money saved are useful. However it must be taken into consideration that there are plants that have a large startup cost but lower running costs and plants that have a cheap startup cost but expensive running costs. The problem is finding a way to use quantum technology to simulate which plants are worth starting at specific times. 
+
+The main github for the challenge tells us to do the following things
+
+1. Load 5 plants and 24 hours of demand. Schedule 6 hours by hand.
+2. Classical baseline: an exact MILP (provided) and a cheapest-first rule (TODO 1).
+3. Write one hour as a QUBO (TODO 2, TODO 3) and check it by brute force.
+4. Solve one hour with QAOA on a simulator.
+5. Run QAOA hour by hour for the whole day. Compare with the baseline.
+6. Run one hour on IonQ hardware through qBraid.
+
+We must "Run the cells from top to bottom. A cell marked TODO stops with NotImplementedError until you fill it in. Everything else already works."

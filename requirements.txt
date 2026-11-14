@@ -14,3 +14,4 @@ qiskit-aer==0.18.2
 # Dev
 pytest
 ipykernel
+networkx

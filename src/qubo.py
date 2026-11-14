@@ -46,10 +46,21 @@ def plant_hour_costs(plants, was_on):
     smallest marginal_cost_per_mwh in the fleet.
     """
     c = np.zeros(len(plants))
-    # TODO 2: fill c[i] with the formula above.
-    # When your lines are in, delete the raise line below.
-    raise NotImplementedError("TODO 2: the cost of each plant for one hour")
+    marginal_cheapest = min(p["marginal_cost_per_mwh"] for p in plants)
+    for i, plant in enumerate(plants):
+        c[i] = plant_hour_cost(plant, was_on[i], marginal_cheapest)
     return c
+
+
+def plant_hour_cost(plant, was_on, marginal_cheapest):
+    """Approximate cost in $ of having one plant on for one hour (see plant_hour_costs).
+
+        startup * (1 - was_on) + no_load + pmin * (marginal - marginal_cheapest)
+    """
+    startup = plant["startup_cost"] * (1 - was_on)
+    no_load = plant["no_load_cost_per_h"]
+    extra_energy = plant["pmin_mw"] * (plant["marginal_cost_per_mwh"] - marginal_cheapest)
+    return startup + no_load + extra_energy
 
 
 # ---------------------------------------------------------------- TODO 3

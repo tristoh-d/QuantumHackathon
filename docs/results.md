@@ -157,9 +157,30 @@ Also in `results/hardware_runs.csv` (written automatically by `src/hardware.py`)
 | Aer | simulator | — | 14 | 200 | 1 | 56 | completed | 54% | 9.0% | — |
 | ionq:ionq:sim:simulator (forte-1 noise) | simulator | ionq:ionq:sim:simulator-a99b-qjob-6af87c58c8f5265fb3f1b4f4 | 14 | 200 | 1 | 56 | completed | 50% | 8.0% | |
 | ionq:ionq:sim:simulator (forte-1 noise) | simulator | ionq:ionq:sim:simulator-a99b-qjob-6af87ccdc8f5265fb3f1b524 | 14 | 200 | 1 | 56 | completed | 50% | 12.5% | |
-| ionq:ionq:qpu:forte-1 | QPU | | | ≤ 200 | 1 | | | | | |
-| quantinuum:quantinuum:sim:h2-emulator | emulator | | | | 1 | | | | | |
+| ionq:ionq:qpu:forte-1 | QPU | — | | ≤ 200 | 1 | | not run (1,630 credits needed, 491 available) | | | |
+| quantinuum:quantinuum:sim:h2-emulator | emulator | — | | | 1 | | not run | | | |
 | ionq:ionq:sim:simulator | simulator | ionq:ionq:sim:simulator-a99b-qjob-6af8811ac8f5265fb3f1b851 | 14 | 200 | 1 | 56 | completed | 60% | 14.0% | 0m 15s |
+| aws:rigetti:qpu:cepheus-1-108q | QPU | aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af8ea1dc8f5265fb3f212c2 | 14 | 200 | 1 | 56 | completed | 6% | 0.5% | 6m 33s |
+| aws:rigetti:qpu:cepheus-1-108q | QPU | aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af900e4c8f5265fb3f21d91 | 14 | 200 | 1 | 56 | completed | 7% | 3.0% | 4m 25s |
+
+### Real hardware: Rigetti Cepheus-1 (2026-11-14)
+
+We could not afford IonQ Forte. Through AWS it costs 30 + 8 credits per shot, so 200 shots cost 1,630 credits, and we had 491. The direct IonQ route was unavailable. We ran the same tuned p=1 circuit on Rigetti Cepheus-1 (108 superconducting qubits, through AWS: 30 + 0.0425 credits per shot, about 38.5 credits per 200-shot run). We also ran a shallow Max-Cut circuit as a calibration check. Both runs together used 77 credits.
+
+| Circuit (200 shots, p=1) | Measure | Aer (ideal) | Rigetti QPU | Random guessing |
+|---|---|---|---|---|
+| Max-Cut primer, 6 nodes, 14 CX | Average cut (out of 7) | 5.08 | **3.94** | 3.5 |
+| | Shots with the best cut | 28.5% | **5.5%** | — |
+| UC fleet 5, hour 14, 8 qubits, 56 CX | Valid shots | 54% | **6%** | 12.5% (4 / 32 choices) |
+| | Best-choice share | 9.0% | **0.5%** | 3.1% (1 / 32) |
+
+- **The shallow circuit still shows some signal.** Max-Cut on hardware is above random (3.94 vs 3.5), but noise removes most of the ideal gain.
+- **The UC circuit is worse than random guessing.** At 56 CX (4× the Max-Cut depth), noise destroys the QAOA signal. The four plant qubits read out "on" in only 38–43% of shots. That bias pushes samples toward too little capacity, which makes them invalid.
+- **A Forte-noise simulator does not show this collapse.** The same circuit on IonQ's cloud simulator with the `forte-1` noise model gave 50% valid shots and an 8.0–12.5% best-choice share. That is close to ideal Aer (54%, 9.0%). Our own noise study ([noise and depth](#simulated-backends-noise-and-depth-on-tva-load-shapes-5-plant-fleet)) also finds Forte-level noise costs almost nothing. So the failure is tied to this device's noise level, not to the circuit itself. This is a prediction only: we have no Forte QPU run to confirm it.
+- **Turnaround:** 6 m 33 s from submit to result for one hour on the QPU, against 0.08 s for the MILP to solve the whole day. A 24-hour schedule built hour by hour on this QPU would take about 2.6 hours of queue time alone.
+- **What this means:** on superconducting hardware today, the hour-by-hour QUBO at p=1 is too deep to beat random sampling. The classical MILP stays the right tool. The hybrid needs a lower-noise device (Forte, trapped ions with all-to-all connections, so fewer gates after compiling) or a shallower QUBO.
+
+Job IDs: Max-Cut `aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af8e9ffc8f5265fb3f212ac` (26 s from submit to result), UC as in the table above. Counts are in `results/counts/`. Chart: `results/hardware_hour14_fleet5_rigetti-qpu-aws.png`. Command: `python -m experiments.qbraid_driver run --task {uc,maxcut} --device rigetti-qpu-aws --i-am-sure`.
 
 ## Timing (honest quantum value)
 
@@ -167,9 +188,9 @@ Also in `results/hardware_runs.csv` (written automatically by `src/hardware.py`)
 |---|---|---|
 | MILP solve | 0.08 s | 0.08 s |
 | Hour-by-hour QAOA (simulator), incl. brute-force scoring | 3.8 s | 10.5 s |
-| Hardware: submit → result (queue included) | 15 s (IonQ cloud simulator, not QPU) | — |
+| Hardware: submit → result (queue included) | 15 s (IonQ cloud simulator); 6 m 33 s (Rigetti Cepheus-1 QPU) | — |
 
-Commands: `python -m experiments.benchmark --fleet 5` and `--fleet 10` (seed 7, 200 shots, p=1). Hardware time is from the ionq-sim run in the Milestone 5 table.
+Commands: `python -m experiments.benchmark --fleet 5` and `--fleet 10` (seed 7, 200 shots, p=1). Hardware times are from the ionq-sim and Rigetti runs in the Milestone 5 table.
 
 ## Real TVA data: fleet and demand days
 

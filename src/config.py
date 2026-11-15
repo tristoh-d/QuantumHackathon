@@ -70,9 +70,11 @@ DEVICES = {
     "ionq-qpu-aws": "aws:ionq:qpu:forte-1",             # fallback route to the same QPU (~1,630 credits / 200 shots)
     "quantinuum-emu": "quantinuum:quantinuum:sim:h2-emulator",  # free emulator, label as emulator
     "iqm-garnet": "aws:iqm:qpu:garnet",                 # backup; ask a qBraid mentor first
+    "rigetti-qpu-aws": "aws:rigetti:qpu:cepheus-1-108q",  # superconducting, cheap (~38.5 credits / 200 shots)
     "gpu-sv": "qbraid:qbraid:sim:gpu-sv",               # GPU statevector, up to 35 qubits
 }
-QPU_DEVICES = {"ionq:ionq:qpu:forte-1", "aws:ionq:qpu:forte-1", "aws:iqm:qpu:garnet"}
+QPU_DEVICES = {"ionq:ionq:qpu:forte-1", "aws:ionq:qpu:forte-1", "aws:iqm:qpu:garnet",
+               "aws:rigetti:qpu:cepheus-1-108q"}
 
 COLORS = {"milp": "#2a78d6", "qaoa": "#eb6834", "rule": "#1baf7a", "random": "#8a8984"}
 

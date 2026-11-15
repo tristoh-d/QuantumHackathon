@@ -15,6 +15,10 @@ src/
   hardware.py         build_hardware_circuit · run_aer · submit_qbraid (QPU guard) · log_run · choice_shares
   plotting.py         plot_demand · plot_schedule · plot_choice_probs · plot_comparison · plot_hardware_vs_sim
   maxcut.py           QAOA primer: qaoa_circuit [TODO cost layer] · optimize [TODO optimizer] · read_out · brute_force
+  network.py          3-area RTS grid, DC power flow, transmission cost         (QPE / HHL approach)
+  hhl.py              HHL for B_bar theta = p_bar (QPE clock, eigenvalue inversion)
+  quso.py             QSim (injection load + HHL + amplitude estimation), QuSO cost layer, QuSO-QAOA, quso_day
+  network_milp.py     organizers' MILP + DC power flow + line costs (classical baseline for the network cost)
 notebooks/
   starter.ipynb       the upstream starter flow, calling src/
   qaoa_primer.ipynb   the upstream Max-Cut primer, calling src/maxcut.py

@@ -8,6 +8,7 @@ using a hybrid of a classical checker and QAOA, then compare it with an exact MI
 - **Problem, rules, milestones, judging:** [docs/challenge.md](docs/challenge.md)
 - **Code layout and conventions:** [docs/architecture.md](docs/architecture.md)
 - **Our numbers (fill in):** [docs/results.md](docs/results.md) · **Deck outline:** [presentation/demo-notes.md](presentation/demo-notes.md)
+- **Alternate approach (QPE / HHL, arXiv:2305.08482):** [docs/qpe_results.md](docs/qpe_results.md)
 
 ## Setup
 
@@ -55,6 +56,15 @@ python -m experiments.qbraid_driver fetch <JOB_ID>                         # col
 ```
 
 Add `--fleet 10` for the 10-plant stretch goal. QPU runs need `--device ionq-qpu --i-am-sure` (credits, ≤ 200 shots, send early).
+
+The alternate QPE / HHL approach (power flow by HHL, cost readout by amplitude estimation, inside QAOA; see [docs/qpe_results.md](docs/qpe_results.md)):
+
+```bash
+python -m experiments.quso_uc components     # HHL + amplitude-estimation accuracy, gate counts
+python -m experiments.quso_uc day --m 10     # full day vs MILP, network MILP, QAOA, random (~1 h)
+python -m experiments.quso_uc scaling        # oracle calls and resources vs grid size
+python -m experiments.quso_uc qbraid         # circuits on the IonQ simulator, ideal + forte-1 noise
+```
 
 ## Layout
 

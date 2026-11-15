@@ -58,6 +58,21 @@ OIL has the biggest change (20 MW to 50 MW) so that it counts as one full block.
 - `reserve_mw` = 10% of demand, rounded to the nearest MW.
 - `demand10.csv` is the same curve times 1500/850 (the 10-plant fleet's capacity over the 5-plant fleet's), with its own 10% reserve.
 
+## Grid (QPE / HHL approach)
+
+`network_rts3.csv` is the grid used by the QPE / HHL approach (`src/network.py`, `docs/qpe_results.md`). It is built from RTS-GMLC `RTS_Data/SourceData/branch.csv` by `make_network.py`:
+
+- One node per RTS-GMLC area: A (buses 1xx), B (2xx), C (3xx). Each plant sits in the area of its RTS bus (`rts_gen_uid`). The whole demand is in area C, because the demand curve is region 3 load.
+- One equivalent line per pair of areas. Parallel tie lines add their susceptances (1 / `X`, per unit on 100 MVA) and their `Cont Rating`. Lines inside an area are dropped.
+
+| Line | RTS tie lines | Susceptance (pu) | Rating (MW) |
+|---|---|---|---|
+| A-B | AB1, AB2, AB3 | 33.058 | 1,175 |
+| A-C | CA-1 | 10.309 | 500 |
+| B-C | CB-1 | 9.615 | 500 |
+
+- `cost_per_mwh` (**$2/MWh on every line**) is **our assumption**: RTS-GMLC has no transmission prices. It is in the range of US transmission-service charges and small next to fuel costs ($22-40/MWh). Ratings are the real RTS values, not scaled to our fleet; they are only checked and reported, not enforced.
+
 ## TVA fleet and TVA demand days
 
 Built by `make_tva.py` (`python data/make_tva.py all`; downloads go to the gitignored `data/.cache/`).

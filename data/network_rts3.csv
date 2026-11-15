@@ -1,0 +1,4 @@
+from_area,to_area,rts_lines,susceptance_pu,rating_mw,cost_per_mwh
+A,B,AB1 AB2 AB3,33.058,1175,2.0
+A,C,CA-1,10.3093,500,2.0
+B,C,CB-1,9.6154,500,2.0

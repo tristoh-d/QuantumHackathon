@@ -9,6 +9,7 @@ using a hybrid of a classical checker and QAOA, then compare it with an exact MI
 - **Code layout and conventions:** [docs/architecture.md](docs/architecture.md)
 - **Our numbers (fill in):** [docs/results.md](docs/results.md) · **Deck outline:** [presentation/demo-notes.md](presentation/demo-notes.md)
 - **Alternate approach (QPE / HHL, arXiv:2305.08482):** [docs/qpe_results.md](docs/qpe_results.md)
+- **Hybrid QAOA + classical look-ahead (real TVA days):** [docs/lookahead_results.md](docs/lookahead_results.md)
 
 ## Setup
 

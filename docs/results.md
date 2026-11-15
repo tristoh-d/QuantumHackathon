@@ -193,6 +193,62 @@ Job IDs: Max-Cut `aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af8e9ffc8f5265fb3f21
 
 Commands: `python -m experiments.benchmark --fleet 5` and `--fleet 10` (seed 7, 200 shots, p=1). Hardware times are from the ionq-sim and Rigetti runs in the Milestone 5 table.
 
+## QAOA optimization: fewer qubits, fewer gates, faster tuning
+
+Three changes in `src/quantum.py` (wired into `src/scheduler.py` and `src/hardware.py`); `reduce=False`,
+`synthesis="pairs"`, `optimizer="COBYLA"` and `backend="qiskit"` give back the original behaviour, and with them
+the runs above reproduce exactly ($351,082 / +7.06% on 5 plants; 3 / 5 at +12.30% and 5 / 5 at +7.92% on 10).
+
+1. **Remove known qubits** (`fixed_bits`, `reduce_qubo`). Locked plants (min up / min down) are substituted into the
+   QUBO instead of getting a qubit. Slack bits the hour cannot use are dropped: the largest spare capacity S of any
+   allowed choice needs only ceil(log2(S + 1)) bits (at hour 14 S = 1, so 1 bit instead of 3). Every allowed choice
+   keeps its lowest energy (tested on every hour). Random guessing gets the same reduction, so the comparison stays
+   like for like. Locks are only fixed when some lock-keeping choice is valid, so the lock-breaking fallback still works.
+2. **Phase-polynomial synthesis of the cost layer** (`qaoa_circuit(..., synthesis="phase_poly")`, Gray-code CNOT
+   synthesis). The same unitary (tested to 1e-9) with shared CNOTs: 35 CX instead of 56 on 8 qubits.
+3. **Faster tuning.** The exact state is computed in numpy instead of rebuilding a qiskit `Statevector` per step
+   (33x faster per hour). scipy's COBYLA is pure Python since scipy 1.16 and its own overhead then dominates;
+   L-BFGS-B reaches the same mean energy on all 24 hours (0.05072 on the 10-plant day) with fewer evaluations.
+
+Circuit size, averaged over the 24 hours (`build_hardware_circuit`, transpiled at optimization level 3; "grid" is
+routing onto a 4x4 square lattice, like Rigetti's):
+
+| Fleet | Circuit | Qubits | CX (all-to-all) | Depth | CX on grid |
+|---|---|---|---|---|---|
+| 5 | original | 8 | 56 | 48 | 84 |
+| 5 | phase-poly only | 8 | 35 | 30 | 66 |
+| 5 | reduced + phase-poly | 6.7 | 26 | 26 | 48 |
+| 5, hour 14 (hardware hour) | original → new | 8 → 5 | 56 → 14 | 48 → 21 | 84 → 23 |
+| 10 | original | 13 | 156 | 78 | 249 |
+| 10 | reduced + phase-poly | 10.7 | 63.5 | 38 | 131.5 |
+
+Aer at hour 14 (`python -m experiments.qbraid_driver run --task uc --device aer`): 55% valid / 13.0% best choice,
+against 54% / 9.0% for the original circuit. The bigger gain is expected on hardware, where noise grew with the
+56 CX (Rigetti runs above); not yet measured on a QPU.
+
+Day results, seeds 0–4, old = original, new = all three changes:
+
+| Fleet | Shots | Sampler | Valid days old → new | Mean gap (valid) old → new | Valid-shot share | Best-choice share | Time per day |
+|---|---|---|---|---|---|---|---|
+| 5 | 5 | QAOA | 0 → 2 / 5 | — → +14.61% | 0.33 → 0.71 | 0.063 → 0.167 | |
+| 5 | 10 | QAOA | 2 → 3 / 5 | +11.82 → +11.67% | 0.46 → 0.73 | 0.063 → 0.135 | |
+| 5 | 10 | Random | 0 → 2 / 5 | — → +16.50% | 0.13 → 0.49 | 0.029 → 0.106 | |
+| 5 | 50 | QAOA | 5 / 5 | +7.74 → +7.59% | 0.51 → 0.70 | 0.064 → 0.113 | about 4 s → 1.4 s |
+| 5 | 200 | QAOA | 5 / 5 | +7.06 → +7.06% | 0.50 → 0.69 | 0.064 → 0.114 | |
+| 10 | 200 | QAOA | 3 → 5 / 5 | +12.30 → +10.62% | 0.28 → 0.64 | 0.0038 → 0.0130 | 48.5 s → 3.3 s |
+| 10 | 200 | Random | 0 → 5 / 5 | — → +11.77% | 0.09 → 0.36 | 0.0010 → 0.0065 | |
+| 10 | 1000 | QAOA | 5 / 5 | +7.92 → +9.39% | 0.38 → 0.63 | 0.0041 → 0.0132 | 40.5 s → 6.1 s |
+| 10 | 1000 | Random | 3 → 5 / 5 | +10.65 → +10.69% | 0.16 → 0.36 | 0.0010 → 0.0061 | |
+
+- **Samples get much better.** About 2x the valid shots and 2–3.5x the best-choice share, for QAOA and for random
+  (removing qubits helps any sampler). QAOA still beats random on both.
+- **The daily cost does not improve, as expected.** Scoring every choice every hour (`sampler="all"`) gives
+  +7.06% (5 plants) and **+9.31% (10 plants)**: the hour-by-hour ceiling. The old +7.92% on 10 plants was below that
+  ceiling because QAOA missed the hour's best in some hours and the different choice happened to pay off later.
+  The new sampler matches the hour's best in 20–24 of 24 hours, so its days sit around the ceiling
+  (+8.5% to +11.2%). The gap to the MILP is still the hour-by-hour loop, not the sampler.
+- **7–15x faster on 10 plants**, mostly from the numpy state plus L-BFGS-B.
+
 ## Real TVA data: fleet and demand days
 
 The 5- and 10-plant fleets have one demand day each. To test on many real days, we added:

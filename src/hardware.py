@@ -20,18 +20,30 @@ RUN_LOG = RESULTS_DIR / "hardware_runs.csv"
 RUN_LOG_FIELDS = ["utc", "device", "kind", "job_id", "shots", "hour", "p", "cx_gates", "status", "counts_file", "note"]
 
 
-def build_hardware_circuit(Q, angles, p=1):
-    """Bind tuned angles into the QAOA circuit and add measurements. Returns (circuit, cx_count)."""
+def build_hardware_circuit(Q, angles, p=1, fixed=None, synthesis="phase_poly"):
+    """Bind tuned angles into the QAOA circuit and add measurements. Returns (circuit, cx_count).
+
+    fixed ({qubit: 0/1}, from the scheduler's log entry) removes known qubits first, so the circuit only
+    has the free ones; the angles must then be tuned with the same `fixed` (run_qaoa(..., fixed=fixed)).
+    circuit.metadata["layout"] records how to put the measured bits back: pass it to choice_shares.
+    synthesis: "phase_poly" (fewer CX, same unitary) or "pairs" (rz + rzz, the original circuit).
+    """
     from qiskit import QuantumCircuit, transpile
 
-    from src.quantum import qaoa_circuit
+    from src.quantum import qaoa_circuit, reduce_qubo
 
-    circuit, params = qaoa_circuit(Q, p=p)
+    n_full = len(Q)
+    fixed = dict(fixed or {})
+    keep = list(range(n_full))
+    if fixed:
+        Q, _, keep = reduce_qubo(Q, 0.0, fixed)
+    circuit, params = qaoa_circuit(Q, p=p, synthesis=synthesis)
     n = circuit.num_qubits
     qc = QuantumCircuit(n, n)
     qc.compose(circuit.assign_parameters(dict(zip(params, angles))), inplace=True)
     qc.measure(range(n), range(n))
-    cx = transpile(qc, basis_gates=["rz", "sx", "x", "cx"]).count_ops().get("cx", 0)
+    qc.metadata = {"layout": {"keep": keep, "fixed": {int(k): int(v) for k, v in fixed.items()}, "n_qubits": n_full}}
+    cx = transpile(qc, basis_gates=["rz", "sx", "x", "cx"], optimization_level=3).count_ops().get("cx", 0)
     return qc, cx
 
 
@@ -94,14 +106,33 @@ def log_run(device_id, job_id, shots, hour, p, cx_gates, status="submitted", cou
                         cx_gates=cx_gates, status=status, counts_file=counts_file, note=note))
 
 
-def choice_shares(counts, n_plants):
+def expand_key(key, layout):
+    """Measured bitstring of a reduced circuit -> integer index on the full qubit space.
+
+    Qiskit prints qubit 0 last, so int(key, 2) has bit i = measured qubit i = original qubit keep[i].
+    A key as long as the full register (a circuit built without `fixed`) is read as is.
+    """
+    key = key.replace(" ", "")
+    k = int(key, 2)
+    if layout is None or len(key) == layout["n_qubits"] and not layout["fixed"]:
+        return k
+    if len(key) == layout["n_qubits"] and len(layout["keep"]) != layout["n_qubits"]:
+        return k                                     # an older, full-size circuit
+    full = sum(1 << int(j) for j, v in layout["fixed"].items() if v)
+    for i, q in enumerate(layout["keep"]):
+        full |= ((k >> i) & 1) << q
+    return full
+
+
+def choice_shares(counts, n_plants, layout=None):
     """Share of shots for each on/off choice.
 
     int(key, 2) reads Qiskit's bitstring (qubit 0 is the last character) as an index,
-    so bit j = qubit j; the low n_plants bits are the plants.
+    so bit j = qubit j; the low n_plants bits are the plants. For a reduced circuit, pass
+    layout=circuit.metadata["layout"] to put the fixed bits back first.
     """
     total = sum(counts.values())
     share = np.zeros(2 ** n_plants)
     for key, c in counts.items():
-        share[int(key.replace(" ", ""), 2) & (2 ** n_plants - 1)] += c / total
+        share[expand_key(key, layout) & (2 ** n_plants - 1)] += c / total
     return share

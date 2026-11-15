@@ -10,7 +10,7 @@ src/
   config.py           constants (BLOCK_MW, N_SLACK, SHOT_GRID, DEVICES, COLORS) + Problem / load_problem()
   classical.py        cheapest_first  [TODO 1] · run_milp · run_rule · run_classical
   qubo.py             plant_hour_costs [TODO 2] · build_qubo [TODO 3] · add_locks · brute force · bit helpers
-  quantum.py          qubo_to_ising · qaoa_circuit · run_qaoa · choice_probs   (needs qiskit)
+  quantum.py          qubo_to_ising · qaoa_circuit (phase-poly CNOT synthesis) · fixed_bits / reduce_qubo · run_qaoa · choice_probs
   scheduler.py        schedule_day (hour-by-hour loop, sampler="qaoa" | "random") · run_day
   hardware.py         build_hardware_circuit · run_aer · submit_qbraid (QPU guard) · log_run · choice_shares
   plotting.py         plot_demand · plot_schedule · plot_choice_probs · plot_comparison · plot_hardware_vs_sim

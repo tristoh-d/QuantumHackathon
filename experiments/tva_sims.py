@@ -96,7 +96,11 @@ def patch_qaoa(noise):
         quantum.run_qaoa = _ideal_run_qaoa
         return
 
-    def run_qaoa_noisy(Q, offset, p=1, start=None, maxiter=60):
+    def run_qaoa_noisy(Q, offset, p=1, start=None, maxiter=60, fixed=None):
+        if fixed:                       # noisy circuit on the free qubits only, then back to the full space
+            Qs, offset_s, keep = quantum.reduce_qubo(Q, offset, fixed)
+            angles, _ = _ideal_run_qaoa(Qs, offset_s, p=p, start=start, maxiter=maxiter)
+            return angles, quantum.embed_probs(noisy_probs(Qs, angles, p, noise), keep, fixed, len(Q))
         angles, _ = _ideal_run_qaoa(Q, offset, p=p, start=start, maxiter=maxiter)
         return angles, noisy_probs(Q, angles, p, noise)
     quantum.run_qaoa = run_qaoa_noisy

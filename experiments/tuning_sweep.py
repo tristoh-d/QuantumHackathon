@@ -29,8 +29,8 @@ def build_qubo_scaled(plants, demand, reserve, was_on, penalty=None, n_slack=3):
     return _build_qubo(plants, demand, reserve, was_on, penalty=A, n_slack=n_slack)
 
 
-def run_qaoa_maybe_cold(Q, offset, p=1, start=None, maxiter=60):
-    return _run_qaoa(Q, offset, p=p, start=start if STATE["warm"] else None, maxiter=maxiter)
+def run_qaoa_maybe_cold(Q, offset, p=1, start=None, maxiter=60, **kwargs):
+    return _run_qaoa(Q, offset, p=p, start=start if STATE["warm"] else None, maxiter=maxiter, **kwargs)
 
 
 scheduler.build_qubo = build_qubo_scaled

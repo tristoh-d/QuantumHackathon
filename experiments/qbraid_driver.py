@@ -114,8 +114,10 @@ def prepare_uc(args):
     with todo_guard("qbraid_driver"):
         schedule, log = schedule_day(problem, p=1, shots=200, seed=args.seed, **kwargs)
     entry = log[t]
-    angles, _ = run_qaoa(entry["Q"], entry["offset"], p=1, start=entry["angles"])
-    qc, cx = build_hardware_circuit(entry["Q"], angles, p=1)
+    fixed = entry.get("fixed") or None
+    angles, _ = run_qaoa(entry["Q"], entry["offset"], p=1, start=entry["angles"], fixed=fixed)
+    qc, cx = build_hardware_circuit(entry["Q"], angles, p=1, fixed=fixed)
+    layout = qc.metadata["layout"]
 
     ref = check_hour(problem.plants, problem.demand[t], problem.reserve[t], schedule[t], was_on=entry["was_on"],
                      must_on=entry["must_on"], must_off=entry["must_off"], verbose=False)
@@ -126,7 +128,7 @@ def prepare_uc(args):
                                  entry["must_on"], entry["must_off"]) for k in range(2 ** n)])
 
     def score(label, counts):
-        share = choice_shares(counts, n)
+        share = choice_shares(counts, n, layout)
         valid, best = f"{share[is_valid].sum():.0%}", f"{share[best_k]:.1%}"
         print(f"{label:<55} valid shots {valid:>5}   best choice {best:>5}")
         return dict(share=share, valid=valid, best=best)
@@ -148,7 +150,8 @@ def prepare_uc(args):
         plt.close(ax.figure)
         print(f"saved {out.relative_to(RESULTS_DIR.parent)}")
 
-    meta = dict(hour=t, p=1, cx=cx, desc=f"UC fleet {args.fleet}, hour {t}")
+    lay = f"qubits {layout['keep']} of {layout['n_qubits']}, fixed {layout['fixed']}" if layout["fixed"] else ""
+    meta = dict(hour=t, p=1, cx=cx, desc=f"UC fleet {args.fleet}, hour {t}" + (f" ({lay})" if lay else ""))
     return qc, meta, score, plot
 
 

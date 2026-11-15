@@ -50,12 +50,15 @@ def main():
         # Reuse the QUBO the hour-by-hour loop built for this hour (locks included), then tune p=1.
         schedule, log = schedule_day(problem, p=1, shots=200, seed=args.seed)
     entry = log[t]
-    angles, _ = run_qaoa(entry["Q"], entry["offset"], p=1, start=entry["angles"])
-    qc, cx = build_hardware_circuit(entry["Q"], angles, p=1)
-    print(f"Hour {t}: {qc.num_qubits} qubits, {cx} CX gates after transpiling (IonQ native ZZ count is lower)")
+    fixed = entry.get("fixed") or None
+    angles, _ = run_qaoa(entry["Q"], entry["offset"], p=1, start=entry["angles"], fixed=fixed)
+    qc, cx = build_hardware_circuit(entry["Q"], angles, p=1, fixed=fixed)
+    layout = qc.metadata["layout"]
+    print(f"Hour {t}: {qc.num_qubits} qubits ({len(entry['Q'])} before removing known qubits), "
+          f"{cx} CX gates after transpiling")
 
     sim_counts = run_aer(qc, shots=args.shots)
-    sim_share = choice_shares(sim_counts, n)
+    sim_share = choice_shares(sim_counts, n, layout)
 
     must_on, must_off = entry["must_on"], entry["must_off"]
     ref = check_hour(problem.plants, problem.demand[t], problem.reserve[t], schedule[t], was_on=entry["was_on"],
@@ -79,7 +82,7 @@ def main():
         counts = job.result().data.get_counts()
         log_run(device_id, job.id, args.shots, t, 1, cx, status="completed", counts=counts, note=args.note)
         hw_label = f"{device_id} ({device_kind(device_id)})" + (" + forte-1 noise" if noise else "")
-        shares.append((hw_label, choice_shares(counts, n)))
+        shares.append((hw_label, choice_shares(counts, n, layout)))
 
     for name, share in shares:
         print(f"{name:<55} valid shots {share[is_valid].sum():5.0%}   best choice {share[best_k]:5.1%}")

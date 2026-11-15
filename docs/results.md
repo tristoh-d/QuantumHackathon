@@ -165,22 +165,23 @@ Also in `results/hardware_runs.csv` (written automatically by `src/hardware.py`)
 
 ### Real hardware: Rigetti Cepheus-1 (2026-11-14)
 
-We could not afford IonQ Forte. Through AWS it costs 30 + 8 credits per shot, so 200 shots cost 1,630 credits, and we had 491. The direct IonQ route was unavailable. We ran the same tuned p=1 circuit on Rigetti Cepheus-1 (108 superconducting qubits, through AWS: 30 + 0.0425 credits per shot, about 38.5 credits per 200-shot run). We also ran a shallow Max-Cut circuit as a calibration check. Both runs together used 77 credits.
+We could not afford IonQ Forte. Through AWS it costs 30 + 8 credits per shot, so 200 shots cost 1,630 credits, and we had 491. The direct IonQ route was unavailable. We ran the same tuned p=1 circuit on Rigetti Cepheus-1 (108 superconducting qubits, through AWS: 30 + 0.0425 credits per shot, about 38.5 credits per 200-shot run). We also ran a shallow Max-Cut circuit as a calibration check. We ran the hour-14 UC circuit twice (about 1.5 hours apart) to see how much the results vary between runs. The three finished runs used about 115 credits. A fourth job (hour 15, `…6af9020a…`, about 38.5 credits) is still in the queue.
 
-| Circuit (200 shots, p=1) | Measure | Aer (ideal) | Rigetti QPU | Random guessing |
-|---|---|---|---|---|
-| Max-Cut primer, 6 nodes, 14 CX | Average cut (out of 7) | 5.08 | **3.94** | 3.5 |
-| | Shots with the best cut | 28.5% | **5.5%** | — |
-| UC fleet 5, hour 14, 8 qubits, 56 CX | Valid shots | 54% | **6%** | 12.5% (4 / 32 choices) |
-| | Best-choice share | 9.0% | **0.5%** | 3.1% (1 / 32) |
+| Circuit (200 shots, p=1) | Measure | Aer (ideal) | Rigetti run 1 | Rigetti run 2 | Random guessing |
+|---|---|---|---|---|---|
+| Max-Cut primer, 6 nodes, 14 CX | Average cut (out of 7) | 5.08 | **3.94** | — | 3.5 |
+| | Shots with the best cut | 28.5% | **5.5%** | — | — |
+| UC fleet 5, hour 14, 8 qubits, 56 CX | Valid shots | 54% | **6%** | **7%** | 12.5% (4 / 32 choices) |
+| | Best-choice share | 9.0% | **0.5%** | **3.0%** | 3.1% (1 / 32) |
 
 - **The shallow circuit still shows some signal.** Max-Cut on hardware is above random (3.94 vs 3.5), but noise removes most of the ideal gain.
-- **The UC circuit is worse than random guessing.** At 56 CX (4× the Max-Cut depth), noise destroys the QAOA signal. The four plant qubits read out "on" in only 38–43% of shots. That bias pushes samples toward too little capacity, which makes them invalid.
+- **The UC circuit does no better than random guessing, in both runs.** Valid shots are 6% and 7%, about half of random's 12.5%. The best-choice share is 0.5% and 3.0%: 1 and 6 shots out of 200, against about 6 expected from random guessing. The difference between the two runs fits shot noise at 200 shots. It does not show that the device got better. At 56 CX (4× the Max-Cut depth), noise destroys the QAOA signal.
+- **The bias is the same in both runs.** The four plant qubits read out "on" in only 38–43% (run 1) and 33–43% (run 2) of shots. That bias pushes samples toward too little capacity, which makes them invalid, so it explains why valid shots fall below random.
 - **A Forte-noise simulator does not show this collapse.** The same circuit on IonQ's cloud simulator with the `forte-1` noise model gave 50% valid shots and an 8.0–12.5% best-choice share. That is close to ideal Aer (54%, 9.0%). Our own noise study ([noise and depth](#simulated-backends-noise-and-depth-on-tva-load-shapes-5-plant-fleet)) also finds Forte-level noise costs almost nothing. So the failure is tied to this device's noise level, not to the circuit itself. This is a prediction only: we have no Forte QPU run to confirm it.
-- **Turnaround:** 6 m 33 s from submit to result for one hour on the QPU, against 0.08 s for the MILP to solve the whole day. A 24-hour schedule built hour by hour on this QPU would take about 2.6 hours of queue time alone.
+- **Turnaround:** 4 m 25 s to 6 m 33 s from submit to result for one hour on the QPU, against 0.08 s for the MILP to solve the whole day. A 24-hour schedule built hour by hour on this QPU would take about 1.8 to 2.6 hours of queue time alone.
 - **What this means:** on superconducting hardware today, the hour-by-hour QUBO at p=1 is too deep to beat random sampling. The classical MILP stays the right tool. The hybrid needs a lower-noise device (Forte, trapped ions with all-to-all connections, so fewer gates after compiling) or a shallower QUBO.
 
-Job IDs: Max-Cut `aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af8e9ffc8f5265fb3f212ac` (26 s from submit to result), UC as in the table above. Counts are in `results/counts/`. Chart: `results/hardware_hour14_fleet5_rigetti-qpu-aws.png`. Command: `python -m experiments.qbraid_driver run --task {uc,maxcut} --device rigetti-qpu-aws --i-am-sure`.
+Job IDs: Max-Cut `aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af8e9ffc8f5265fb3f212ac` (26 s from submit to result). UC run 1 `…6af8ea1d…`, run 2 `…6af900e4…` (full IDs in the table above). Counts are in `results/counts/`. Chart: `results/hardware_hour14_fleet5_rigetti-qpu-aws.png`. Command: `python -m experiments.qbraid_driver run --task {uc,maxcut} --device rigetti-qpu-aws --i-am-sure`.
 
 ## Timing (honest quantum value)
 
@@ -188,7 +189,7 @@ Job IDs: Max-Cut `aws:rigetti:qpu:cepheus-1-108q-a99b-qjob-6af8e9ffc8f5265fb3f21
 |---|---|---|
 | MILP solve | 0.08 s | 0.08 s |
 | Hour-by-hour QAOA (simulator), incl. brute-force scoring | 3.8 s | 10.5 s |
-| Hardware: submit → result (queue included) | 15 s (IonQ cloud simulator); 6 m 33 s (Rigetti Cepheus-1 QPU) | — |
+| Hardware: submit → result (queue included) | 15 s (IonQ cloud simulator); 4 m 25 s – 6 m 33 s (Rigetti Cepheus-1 QPU, 2 runs) | — |
 
 Commands: `python -m experiments.benchmark --fleet 5` and `--fleet 10` (seed 7, 200 shots, p=1). Hardware times are from the ionq-sim and Rigetti runs in the Milestone 5 table.
 

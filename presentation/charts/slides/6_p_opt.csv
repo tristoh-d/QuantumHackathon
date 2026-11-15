@@ -1,0 +1,65 @@
+family,method,n,seeds,seeds_with_hits,geo_mean_p_opt
+market_split,Random,8,5,5,3.906e-03
+market_split,Random,10,5,5,9.766e-04
+market_split,Random,12,5,5,2.441e-04
+market_split,Random,14,5,5,6.104e-05
+market_split,Random,16,5,5,1.526e-05
+market_split,Random,18,5,5,3.815e-06
+market_split,Random,20,5,5,9.537e-07
+market_split,Random,22,5,5,2.384e-07
+market_split,QAOA p=1,8,5,5,4.268e-03
+market_split,QAOA p=1,10,5,5,9.676e-04
+market_split,QAOA p=1,12,5,5,4.266e-04
+market_split,QAOA p=1,14,5,5,8.588e-05
+market_split,QAOA p=1,16,5,5,1.706e-05
+market_split,QAOA p=1,18,5,5,4.948e-06
+market_split,QAOA p=1,20,5,5,1.127e-06
+market_split,QAOA p=1,22,5,5,3.503e-07
+market_split,QAOA p=3,8,5,5,8.492e-03
+market_split,QAOA p=3,10,5,5,2.545e-03
+market_split,QAOA p=3,12,5,5,7.683e-04
+market_split,QAOA p=3,14,5,5,1.951e-04
+market_split,QAOA p=3,16,5,5,3.991e-05
+market_split,QAOA p=3,18,5,5,1.296e-05
+market_split,QAOA p=3,20,5,5,2.899e-06
+market_split,QAOA p=3,22,5,5,7.994e-07
+market_split,Sim. annealing (per run),8,5,5,1.476e-01
+market_split,Sim. annealing (per run),10,5,5,4.298e-02
+market_split,Sim. annealing (per run),12,5,5,1.399e-02
+market_split,Sim. annealing (per run),14,5,5,4.819e-03
+market_split,Sim. annealing (per run),16,5,5,2.631e-03
+market_split,Sim. annealing (per run),18,5,4,1.084e-03
+market_split,Sim. annealing (per run),20,5,3,7.579e-04
+market_split,Sim. annealing (per run),22,5,0,5.000e-04
+interaction,Random,8,5,5,4.487e-03
+interaction,Random,10,5,5,9.766e-04
+interaction,Random,12,5,5,2.441e-04
+interaction,Random,14,5,5,7.011e-05
+interaction,Random,16,5,5,1.526e-05
+interaction,Random,18,5,5,3.815e-06
+interaction,Random,20,5,5,1.188e-06
+interaction,Random,22,5,5,2.739e-07
+interaction,QAOA p=1,8,5,5,8.577e-03
+interaction,QAOA p=1,10,5,5,2.330e-03
+interaction,QAOA p=1,12,5,5,6.142e-04
+interaction,QAOA p=1,14,5,5,1.862e-04
+interaction,QAOA p=1,16,5,5,4.293e-05
+interaction,QAOA p=1,18,5,5,1.109e-05
+interaction,QAOA p=1,20,5,5,3.527e-06
+interaction,QAOA p=1,22,5,5,8.509e-07
+interaction,QAOA p=3,8,5,5,1.734e-02
+interaction,QAOA p=3,10,5,5,4.131e-03
+interaction,QAOA p=3,12,5,5,1.130e-03
+interaction,QAOA p=3,14,5,5,3.526e-04
+interaction,QAOA p=3,16,5,5,8.387e-05
+interaction,QAOA p=3,18,5,5,1.580e-05
+interaction,QAOA p=3,20,5,5,5.012e-06
+interaction,QAOA p=3,22,5,5,1.222e-06
+interaction,Sim. annealing (per run),8,5,5,1.443e-01
+interaction,Sim. annealing (per run),10,5,5,6.044e-02
+interaction,Sim. annealing (per run),12,5,5,2.593e-02
+interaction,Sim. annealing (per run),14,5,5,9.824e-03
+interaction,Sim. annealing (per run),16,5,4,1.719e-03
+interaction,Sim. annealing (per run),18,5,5,1.000e-03
+interaction,Sim. annealing (per run),20,5,1,6.598e-04
+interaction,Sim. annealing (per run),22,5,0,5.000e-04

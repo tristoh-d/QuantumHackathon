@@ -1,0 +1,11 @@
+sampler,shots,mean_hours_matching_best
+QAOA,5,5.0
+QAOA,10,12.6
+QAOA,20,18.4
+QAOA,50,21.8
+QAOA,200,24.0
+Random,5,3.0
+Random,10,5.0
+Random,20,11.4
+Random,50,19.0
+Random,200,24.0

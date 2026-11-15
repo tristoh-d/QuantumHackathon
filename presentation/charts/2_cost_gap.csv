@@ -1,0 +1,11 @@
+fleet,method,shots,mean_gap_pct,ci_lo,ci_hi,valid_days,days
+5 plants,QAOA,200,4.9,3.59,6.21,40,40
+5 plants,Random,200,4.6,3.4,5.76,40,40
+5 plants,QAOA,20,22.62,17.96,27.44,19,40
+5 plants,Random,20,27.51,24.14,30.87,7,40
+5 plants,Rule,,5.9,3.34,8.78,25,40
+10 plants,QAOA,1000,15.18,12.94,17.58,39,40
+10 plants,Random,1000,16.53,14.32,18.99,37,40
+10 plants,QAOA,200,25.12,20.51,30.45,38,40
+10 plants,Random,200,36.31,32.52,40.69,22,40
+10 plants,Rule,,4.63,3.19,6.19,22,40

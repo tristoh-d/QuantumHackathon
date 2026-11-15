@@ -1,0 +1,11 @@
+fleet,method,shots,valid_days,days
+5 plants (32 choices / hour),Rule,,25,40
+5 plants (32 choices / hour),Random,20,7,40
+5 plants (32 choices / hour),QAOA,20,19,40
+5 plants (32 choices / hour),Random,200,40,40
+5 plants (32 choices / hour),QAOA,200,40,40
+"10 plants (1,024 choices / hour)",Rule,,22,40
+"10 plants (1,024 choices / hour)",Random,200,22,40
+"10 plants (1,024 choices / hour)",QAOA,200,38,40
+"10 plants (1,024 choices / hour)",Random,1000,37,40
+"10 plants (1,024 choices / hour)",QAOA,1000,39,40

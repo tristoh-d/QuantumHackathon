@@ -1,0 +1,7 @@
+step,seconds,kind
+"MILP, 5 plants",0.08,MILP
+"MILP, 10 plants",0.08,MILP
+"MILP, 20 TVA plants",0.794,MILP
+"QAOA, 5 plants (simulator)",3.8,QAOA
+"QAOA, 10 plants (simulator)",10.5,QAOA
+"One hour on IonQ cloud sim, submit to result",15,QAOA
